@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "894362509654",
+    "project_id": "dksoft-market",
+    "storage_bucket": "dksoft-market.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:894362509654:android:30b39d058b03badeda36f7",
+        "android_client_info": {
+          "package_name": "com.example.dksoft_market"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_O4iqbCu0t1yPfbwCoabqe8_1b9j7jDw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:894362509654:android:0daddc62b38e731ada36f7",
+        "android_client_info": {
+          "package_name": "com.example.dksoft_market_dealer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_O4iqbCu0t1yPfbwCoabqe8_1b9j7jDw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:894362509654:android:ced32b79bf27417ada36f7",
+        "android_client_info": {
+          "package_name": "com.example.dksoft_market_livreur"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_O4iqbCu0t1yPfbwCoabqe8_1b9j7jDw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
