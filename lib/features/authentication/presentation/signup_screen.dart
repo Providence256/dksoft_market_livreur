@@ -1,11 +1,8 @@
 import 'package:dksoft_market_livreur/features/authentication/presentation/auth_controller.dart';
-import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/auth_dropdown_field.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/auth_text_field.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/phone_prefix.dart';
 import 'package:dksoft_market_livreur/routing/app_router.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
-import 'package:dksoft_market_livreur/utils/constants/kinshasa_communes.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -137,7 +134,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     color: Colors.grey[600],
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
 
                 const _SectionLabel('Vos informations'),
                 const SizedBox(height: 10),
@@ -145,7 +142,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   label: 'NOM COMPLET',
                   controller: _nameController,
                   prefix: Icon(Icons.person_outline, color: Colors.grey[500]),
-                  hintText: 'Jean Mukendi',
+                  hintText: 'Providence Musaghi',
                   validator: (value) => (value ?? '').trim().length < 2
                       ? 'Entrez votre nom complet'
                       : null,
@@ -165,83 +162,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     return digits.length < 9 ? 'Numéro invalide' : null;
                   },
                 ),
-                const SizedBox(height: 14),
-                AuthTextField(
-                  label: 'E-MAIL (OPTIONNEL)',
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  hintText: 'vous@exemple.com',
-                  prefix: Icon(Icons.mail_outline, color: Colors.grey[500]),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return null;
-                    return RegExp(r'^.+@.+\..+$').hasMatch(value)
-                        ? null
-                        : 'E-mail invalide';
-                  },
-                ),
-                const SizedBox(height: 14),
-                AuthDropdownField(
-                  label: 'COMMUNE',
-                  hintText: 'Choisir votre commune',
-                  value: _commune,
-                  items: kKinshasaCommunes,
-                  prefix: Icon(
-                    Icons.location_on_outlined,
-                    color: Colors.grey[500],
-                  ),
-                  onChanged: (value) => setState(() => _commune = value),
-                  validator: (value) =>
-                      value == null ? 'Choisissez votre commune' : null,
-                ),
-                const SizedBox(height: 22),
-
-                const _SectionLabel('Votre moto'),
                 const SizedBox(height: 10),
-                AuthTextField(
-                  label: 'TYPE DE MOTO',
-                  controller: _motoController,
-                  hintText: 'Ex : Honda 125, Haojue 150',
-                  prefix: Icon(Icons.two_wheeler, color: Colors.grey[500]),
-                  validator: (value) => (value ?? '').trim().isEmpty
-                      ? 'Indiquez votre type de moto'
-                      : null,
-                ),
-                const SizedBox(height: 14),
-                AuthTextField(
-                  label: 'PLAQUE (OPTIONNEL)',
-                  controller: _plaqueController,
-                  hintText: '1234AB01',
-                  prefix: Icon(
-                    Icons.confirmation_number_outlined,
-                    color: Colors.grey[500],
-                  ),
-                ),
-                const SizedBox(height: 22),
-
-                const _SectionLabel("Pièce d'identité"),
-                const SizedBox(height: 10),
-                AuthDropdownField(
-                  label: 'TYPE DE PIÈCE',
-                  hintText: 'Choisir le type de pièce',
-                  value: _idType,
-                  items: _idTypes,
-                  prefix: Icon(Icons.badge_outlined, color: Colors.grey[500]),
-                  onChanged: (value) => setState(() => _idType = value),
-                  validator: (value) =>
-                      value == null ? 'Choisissez le type de pièce' : null,
-                ),
-                const SizedBox(height: 14),
-                AuthTextField(
-                  label: 'NUMÉRO DE LA PIÈCE',
-                  controller: _idNumberController,
-                  hintText: 'Numéro figurant sur la pièce',
-                  prefix: Icon(Icons.numbers, color: Colors.grey[500]),
-                  validator: (value) => (value ?? '').trim().length < 4
-                      ? 'Numéro de pièce invalide'
-                      : null,
-                ),
-                const SizedBox(height: 22),
-
                 const _SectionLabel('Sécurité'),
                 const SizedBox(height: 10),
                 AuthTextField(
@@ -280,30 +201,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                InkWell(
-                  onTap: () => setState(() => _acceptedTerms = !_acceptedTerms),
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        value: _acceptedTerms,
-                        onChanged: (value) =>
-                            setState(() => _acceptedTerms = value ?? false),
-                        activeColor: AppColors.primary,
-                      ),
-                      Expanded(
-                        child: Text(
-                          "J'accepte les conditions d'utilisation de "
-                          'Dksoft Market',
-                          style: theme.textTheme.bodySmall!.copyWith(
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -323,32 +220,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             ),
                           )
                         : const Text(
-                            'Créer mon compte',
+                            'Suivant',
                             style: TextStyle(fontWeight: FontWeight.w700),
                           ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                Center(
-                  child: RichText(
-                    text: TextSpan(
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                      children: [
-                        const TextSpan(text: 'Déjà un compte ? '),
-                        TextSpan(
-                          text: 'Se connecter',
-                          style: const TextStyle(
-                            color: AppColors.secondary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () => Navigator.of(context).pop(),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
               ],

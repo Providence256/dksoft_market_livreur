@@ -3,6 +3,7 @@ import 'package:dksoft_market_livreur/features/authentication/data/auth_reposito
 import 'package:dksoft_market_livreur/features/deliveries/data/deliveries_repository.dart';
 import 'package:dksoft_market_livreur/features/deliveries/domain/delivery_model.dart';
 import 'package:dksoft_market_livreur/features/deliveries/presentation/delivery_action_controller.dart';
+import 'package:dksoft_market_livreur/routing/app_router.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_sizes.dart';
 import 'package:dksoft_market_livreur/utils/formatters/currency_formatter.dart';
@@ -35,7 +36,20 @@ class DeliveryDetailScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Détail de la course')),
+      appBar: AppBar(
+        title: const Text('Détail de la course'),
+        actions: [
+          IconButton(
+            tooltip: 'Voir sur la carte',
+            icon: const Icon(Icons.map_outlined),
+            color: AppColors.textPrimaryLight,
+            onPressed: () => context.pushNamed(
+              AppRoute.deliveryMap.name,
+              pathParameters: {'id': deliveryId},
+            ),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: deliveryAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),

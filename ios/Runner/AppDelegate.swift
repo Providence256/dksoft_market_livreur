@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import GoogleMaps
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -7,8 +8,13 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    GMSServices.provideAPIKey("AIzaSyDZD4gAYRDbC7pr52842UGVTUDmFBRVHcU")
-    GeneratedPluginRegistrant.register(with: self)
+    // La clé vient de ios/Flutter/Secrets.xcconfig (ignoré par git) via
+    // Info.plist (GMSApiKey). Jamais écrite en dur dans le code.
+    if let key = Bundle.main.object(forInfoDictionaryKey: "GMSApiKey") as? String,
+       !key.isEmpty {
+      GMSServices.provideAPIKey(key)
+    }
+    
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

@@ -3,12 +3,13 @@ import 'package:dksoft_market_livreur/features/authentication/presentation/login
 import 'package:dksoft_market_livreur/features/authentication/presentation/signup_screen.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/role_guard.dart';
 import 'package:dksoft_market_livreur/features/deliveries/presentation/delivery_detail_screen.dart';
+import 'package:dksoft_market_livreur/features/map/presentation/delivery_map_screen.dart';
 import 'package:dksoft_market_livreur/features/shell/presentation/main_shell.dart';
 import 'package:dksoft_market_livreur/routing/go_router_refresh_stream.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-enum AppRoute { home, login, signup, delivery }
+enum AppRoute { home, login, signup, delivery, deliveryMap }
 
 const _publicPaths = ['/login', '/signup'];
 
@@ -44,6 +45,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         name: AppRoute.delivery.name,
         builder: (context, state) => RoleGuard(
           child: DeliveryDetailScreen(deliveryId: state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: '/delivery/:id/map',
+        name: AppRoute.deliveryMap.name,
+        builder: (context, state) => RoleGuard(
+          child: DeliveryMapScreen(deliveryId: state.pathParameters['id']!),
         ),
       ),
       GoRoute(

@@ -219,12 +219,28 @@ class _ActiveDeliveryView extends ConsumerWidget {
           error: (_, _) => const Text('Impossible de charger la course.'),
           data: (delivery) => delivery == null
               ? const Text("Cette course n'existe plus.")
-              : DeliveryCard(
-                  delivery: delivery,
-                  onTap: () => context.pushNamed(
-                    AppRoute.delivery.name,
-                    pathParameters: {'id': delivery.id},
-                  ),
+              : Column(
+                  children: [
+                    DeliveryCard(
+                      delivery: delivery,
+                      onTap: () => context.pushNamed(
+                        AppRoute.delivery.name,
+                        pathParameters: {'id': delivery.id},
+                      ),
+                    ),
+                    gapH12,
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => context.pushNamed(
+                          AppRoute.deliveryMap.name,
+                          pathParameters: {'id': delivery.id},
+                        ),
+                        icon: const Icon(Icons.map_outlined, size: 20),
+                        label: const Text('Ouvrir la carte'),
+                      ),
+                    ),
+                  ],
                 ),
         ),
       ],
