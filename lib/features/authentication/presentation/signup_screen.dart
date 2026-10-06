@@ -1,15 +1,21 @@
+import 'package:dksoft_market_livreur/features/authentication/data/auth_repository.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/auth_controller.dart';
-import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/auth_text_field.dart';
-import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/phone_prefix.dart';
+import 'package:dksoft_market_livreur/features/authentication/presentation/signup/signup_draft.dart';
+import 'package:dksoft_market_livreur/features/authentication/presentation/signup/steps/account_step.dart';
+import 'package:dksoft_market_livreur/features/authentication/presentation/signup/steps/identity_step.dart';
+import 'package:dksoft_market_livreur/features/authentication/presentation/signup/steps/moto_step.dart';
+import 'package:dksoft_market_livreur/features/authentication/presentation/signup/steps/review_step.dart';
 import 'package:dksoft_market_livreur/routing/app_router.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
+import 'package:dksoft_market_livreur/utils/constants/app_sizes.dart';
+import 'package:dksoft_market_livreur/utils/helpers/phone_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
-const _idTypes = ['Carte d\'électeur', 'Permis de conduire', 'Passeport'];
-
+/// Inscription du motard en 4 étapes : compte, pièce d'identité, moto,
+/// récapitulatif. Rien n'est envoyé avant le dernier bouton.
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
 
@@ -18,215 +24,255 @@ class SignUpScreen extends ConsumerStatefulWidget {
 }
 
 class _SignUpScreenState extends ConsumerState<SignUpScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _motoController = TextEditingController();
-  final _plaqueController = TextEditingController();
-  final _idNumberController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  static const _lastStep = 3;
 
-  String? _commune;
-  String? _idType;
-  bool _obscurePassword = true;
-  bool _acceptedTerms = false;
+  static const _titles = [
+    'Créez votre compte livreur',
+    "Informations de la pièce d'identité",
+    'Renseignez votre moto',
+    'Vérifiez vos informations',
+  ];
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-    _motoController.dispose();
-    _plaqueController.dispose();
-    _idNumberController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
+  static const _subtitles = [
+    'Votre numéro de téléphone vous servira à vous connecter.',
+    'Saisissez les informations de votre pièce. Vous enverrez sa photo '
+        "après l'inscription.",
+    'Indiquez les informations de votre moto, personnelle ou louée.',
+    null,
+  ];
+
+  int _step = 0;
+
+  bool _canContinue(SignUpDraft draft) {
+    return switch (_step) {
+      0 => draft.isAccountValid,
+      1 => draft.isIdentityValid,
+      2 => draft.isMotoValid,
+      _ => draft.acceptedTerms,
+    };
   }
 
-  String? _nullIfEmpty(String value) {
-    final trimmed = value.trim();
-    return trimmed.isEmpty ? null : trimmed;
+  void _goBack() {
+    FocusScope.of(context).unfocus();
+    if (_step > 0) {
+      setState(() => _step--);
+    } else if (context.canPop()) {
+      context.pop();
+    } else {
+      context.goNamed(AppRoute.login.name);
+    }
   }
 
-  Future<void> _submit() async {
-    final isValid = _formKey.currentState!.validate();
+  Future<void> _next(SignUpDraft draft) async {
+    FocusScope.of(context).unfocus();
 
-    if (!_acceptedTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Vous devez accepter les conditions d'utilisation."),
-        ),
-      );
+    if (_step < _lastStep) {
+      setState(() => _step++);
       return;
     }
-    if (!isValid) return;
 
-    FocusScope.of(context).unfocus();
+    // Dernière étape : création du compte.
+    final phone = normalizeCongoPhone(draft.phone);
+    if (phone == null || !draft.isMotoYearValid) {
+      setState(() => _step = 0);
+      return;
+    }
+
+    final plaque = draft.plaque.trim();
 
     final success = await ref
         .read(authControllerProvider.notifier)
         .signUp(
-          fullName: _nameController.text.trim(),
-          phone: '+243${_phoneController.text.replaceAll(' ', '')}',
-          password: _passwordController.text,
-          commune: _commune!,
-          motoType: _motoController.text.trim(),
-          idType: _idType!,
-          idNumber: _idNumberController.text.trim(),
-          plaque: _nullIfEmpty(_plaqueController.text),
-          email: _nullIfEmpty(_emailController.text),
+          firstName: draft.firstName.trim(),
+          lastName: draft.lastName.trim(),
+          phone: phone,
+          password: draft.password,
+          idCountry: draft.idCountry,
+          idType: draft.idType!,
+          idNumber: draft.idNumber.trim(),
+          idIssueDate: draft.idIssueDate!,
+          motoMake: draft.motoMake!,
+          motoModel: draft.motoModel.trim(),
+          motoColor: draft.motoColor!,
+          motoYear: draft.motoYearNumber!,
+          plaque: plaque.isEmpty ? null : plaque,
         );
 
     if (!mounted || !success) return;
     context.goNamed(AppRoute.home.name);
   }
 
+  Widget _buildStep() {
+    return switch (_step) {
+      0 => const AccountStep(),
+      1 => const IdentityStep(),
+      2 => const MotoStep(),
+      _ => ReviewStep(onEdit: (step) => setState(() => _step = step)),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(authControllerProvider).isLoading;
     final theme = Theme.of(context);
+    final draft = ref.watch(signUpDraftProvider);
+    final isLoading = ref.watch(authControllerProvider).isLoading;
+    final subtitle = _subtitles[_step];
 
     ref.listen<AsyncValue<void>>(authControllerProvider, (previous, next) {
-      if (next.hasError) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('${next.error}')));
+      if (!next.hasError) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${next.error}')));
+
+      // Numéro déjà inscrit : on ramène l'utilisateur à l'étape du téléphone.
+      if (next.error == AuthRepository.phoneInUseMessage) {
+        setState(() => _step = 0);
       }
     });
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        centerTitle: false,
-        elevation: 0,
-        title: Text(
-          'Devenir livreur',
-          style: theme.textTheme.headlineSmall!.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Rejoignez les livreurs Dksoft',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Votre profil sera vérifié par l'administration avant "
-                  'de recevoir vos premières courses.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 12),
+    return PopScope(
+      // Le bouton « retour » du téléphone revient d'une étape, il ne quitte
+      // l'inscription qu'à la première.
+      canPop: _step == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !isLoading) setState(() => _step--);
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // ---- Flèche retour + progression ----
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, Sizes.p24, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'Retour',
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: .05,
+                        ),
+                      ),
+                      icon: HugeIcon(
+                        icon: HugeIcons.strokeRoundedArrowLeft02,
+                        size: 28,
+                        color: AppColors.primary,
+                      ),
 
-                const _SectionLabel('Vos informations'),
-                const SizedBox(height: 10),
-                AuthTextField(
-                  label: 'NOM COMPLET',
-                  controller: _nameController,
-                  prefix: Icon(Icons.person_outline, color: Colors.grey[500]),
-                  hintText: 'Providence Musaghi',
-                  validator: (value) => (value ?? '').trim().length < 2
-                      ? 'Entrez votre nom complet'
-                      : null,
-                ),
-                const SizedBox(height: 14),
-                AuthTextField(
-                  label: 'TÉLÉPHONE',
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  hintText: '995 415 641',
-                  prefix: const PhonePrefix(),
-                  validator: (value) {
-                    final digits = (value ?? '').replaceAll(
-                      RegExp(r'[^0-9]'),
-                      '',
-                    );
-                    return digits.length < 9 ? 'Numéro invalide' : null;
-                  },
-                ),
-                const SizedBox(height: 10),
-                const _SectionLabel('Sécurité'),
-                const SizedBox(height: 10),
-                AuthTextField(
-                  label: 'MOT DE PASSE',
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  prefix: Icon(
-                    Icons.lock_outline_rounded,
-                    color: Colors.grey[500],
-                  ),
-                  suffix: IconButton(
-                    onPressed: () =>
-                        setState(() => _obscurePassword = !_obscurePassword),
-                    icon: HugeIcon(
-                      color: AppColors.primary,
-                      icon: _obscurePassword
-                          ? HugeIcons.strokeRoundedViewOffSlash
-                          : HugeIcons.strokeRoundedView,
+                      onPressed: isLoading ? null : _goBack,
                     ),
-                  ),
-                  validator: (value) =>
-                      (value ?? '').length < 6 ? 'Au moins 6 caractères' : null,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _StepProgress(
+                        current: _step,
+                        total: _lastStep + 1,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 14),
-                AuthTextField(
-                  label: 'CONFIRMER LE MOT DE PASSE',
-                  controller: _confirmPasswordController,
-                  obscureText: _obscurePassword,
-                  prefix: Icon(
-                    Icons.lock_outline_rounded,
-                    color: Colors.grey[500],
-                  ),
-                  validator: (value) => value != _passwordController.text
-                      ? 'Les mots de passe ne correspondent pas'
-                      : null,
-                ),
-                const SizedBox(height: 16),
+              ),
 
-                SizedBox(
-                  width: double.infinity,
+              // ---- Contenu défilant : titre + étape ----
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    Sizes.p24,
+                    Sizes.p8,
+                    Sizes.p24,
+                    Sizes.p24,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Étape ${_step + 1} sur ${_lastStep + 1}',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: AppColors.textSecondaryLight,
+                        ),
+                      ),
+                      gapH8,
+                      Text(
+                        _titles[_step],
+                        style: theme.textTheme.headlineMedium,
+                      ),
+                      if (subtitle != null) ...[
+                        gapH8,
+                        Text(
+                          subtitle,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
+                      gapH20,
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        child: KeyedSubtree(
+                          key: ValueKey(_step),
+                          child: _buildStep(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ---- Bouton fixé en bas ----
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(
+                  Sizes.p16,
+                  Sizes.p12,
+                  Sizes.p16,
+                  Sizes.p16,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 16,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  height: 50,
                   child: ElevatedButton(
-                    onPressed: isLoading ? null : _submit,
+                    onPressed: (!isLoading && _canContinue(draft))
+                        ? () => _next(draft)
+                        : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      disabledBackgroundColor: const Color(0xFFF3F3F3),
+                      disabledForegroundColor: AppColors.textHintLight,
                     ),
                     child: isLoading
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 22,
+                            height: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.4,
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Suivant',
-                            style: TextStyle(fontWeight: FontWeight.w700),
+                        : Text(
+                            _step == _lastStep
+                                ? 'Créer mon compte'
+                                : 'Continuer',
+                            style: Theme.of(context).textTheme.bodySmall!
+                                .copyWith(color: Colors.white),
                           ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -234,17 +280,34 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-  final String text;
+/// Barre de progression en segments : un par étape, remplis jusqu'à
+/// l'étape en cours.
+class _StepProgress extends StatelessWidget {
+  const _StepProgress({required this.current, required this.total});
+
+  final int current;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: Theme.of(
-        context,
-      ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+    return Row(
+      children: [
+        for (var i = 0; i < total; i++) ...[
+          Expanded(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              height: 5,
+              decoration: BoxDecoration(
+                color: i <= current
+                    ? AppColors.primary
+                    : AppColors.dividerLight,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+          if (i < total - 1) const SizedBox(width: 6),
+        ],
+      ],
     );
   }
 }

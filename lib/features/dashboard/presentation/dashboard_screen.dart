@@ -57,13 +57,6 @@ class _DashboardBody extends StatelessWidget {
       padding: const EdgeInsets.all(Sizes.p20),
       children: [
         Text('Bonjour $firstName', style: theme.textTheme.headlineMedium),
-        gapH4,
-        Text(
-          livreur.commune,
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: AppColors.textSecondaryLight,
-          ),
-        ),
         gapH20,
         _AvailabilityCard(disponible: livreur.disponible),
         gapH20,
@@ -254,8 +247,6 @@ class _ProfileCard extends StatelessWidget {
           Text('Mon profil', style: theme.textTheme.titleMedium),
           gapH12,
           _InfoRow(icon: Icons.phone_outlined, text: livreur.phone),
-          gapH8,
-          _InfoRow(icon: Icons.location_on_outlined, text: livreur.commune),
           gapH8,
           _InfoRow(
             icon: Icons.two_wheeler,

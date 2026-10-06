@@ -2,6 +2,7 @@ import 'package:dksoft_market_livreur/features/authentication/presentation/auth_
 import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/auth_text_field.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/phone_prefix.dart';
 import 'package:dksoft_market_livreur/routing/app_router.dart';
+import 'package:dksoft_market_livreur/utils/helpers/phone_format.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -40,7 +41,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await ref
         .read(authControllerProvider.notifier)
         .signIn(
-          phone: '+243${_phoneController.text.replaceAll(' ', '')}',
+          phone:
+              normalizeCongoPhone(_phoneController.text) ??
+              '+243${_phoneController.text.replaceAll(' ', '')}',
           password: _passwordController.text,
         );
   }

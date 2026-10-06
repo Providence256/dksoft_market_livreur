@@ -143,7 +143,7 @@ class PendingValidationScreen extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: hasPhoto
-                    ? OutlinedButton(
+                    ? ElevatedButton(
                         onPressed: isUploading
                             ? null
                             : () => _choosePhotoSource(context, ref),
@@ -177,7 +177,15 @@ class PendingValidationScreen extends ConsumerWidget {
               gapH12,
               TextButton(
                 onPressed: () => ref.read(authRepositoryProvider).signOut(),
-                child: const Text('Se déconnecter'),
+                style: TextButton.styleFrom(
+                  backgroundColor: AppColors.errorDark.withValues(alpha: .5),
+                ),
+                child: Text(
+                  'Se déconnecter',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall!.copyWith(color: AppColors.error),
+                ),
               ),
             ],
           ),

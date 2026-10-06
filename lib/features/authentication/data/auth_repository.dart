@@ -12,6 +12,11 @@ class AuthRepository {
   static const usersPath = 'users';
   static const livreursPath = 'livreurs';
 
+  /// Affiché quand le numéro est déjà inscrit. L'assistant d'inscription
+  /// s'en sert pour ramener l'utilisateur à l'étape du téléphone.
+  static const phoneInUseMessage =
+      'Un compte existe déjà avec ce numéro de téléphone.';
+
   /// Doit rester identique à LIVREUR_EMAIL_DOMAIN dans
   /// functions/src/index.ts : c'est ce domaine qui permet à la Cloud
   /// Function de poser le claim `role: livreur`.
@@ -44,16 +49,22 @@ class AuthRepository {
   /// supprimé pour ne pas laisser un compte à moitié inscrit (le numéro
   /// resterait « déjà utilisé » sans profil).
   Future<void> signUp({
-    required String fullName,
+    required String firstName,
+    required String lastName,
     required String phone,
     required String password,
-    required String commune,
-    required String motoType,
+    required String idCountry,
     required String idType,
     required String idNumber,
+    required DateTime idIssueDate,
+    required String motoMake,
+    required String motoModel,
+    required String motoColor,
+    required int motoYear,
     String? plaque,
-    String? email,
   }) async {
+    final fullName = '$firstName $lastName'.trim();
+
     final credential = await _auth.createUserWithEmailAndPassword(
       email: _pseudoEmailFor(phone),
       password: password,
@@ -68,13 +79,19 @@ class AuthRepository {
       final livreur = LivreurModel(
         id: user.uid,
         fullName: fullName,
+        firstName: firstName,
+        lastName: lastName,
         phone: phone,
-        email: email,
-        commune: commune,
-        motoType: motoType,
+        motoType: '$motoMake $motoModel',
+        motoMake: motoMake,
+        motoModel: motoModel,
+        motoColor: motoColor,
+        motoYear: motoYear,
         plaque: plaque,
+        idCountry: idCountry,
         idType: idType,
         idNumber: idNumber,
+        idIssueDate: idIssueDate,
       );
 
       final batch = _firestore.batch();
@@ -82,7 +99,6 @@ class AuthRepository {
       batch.set(_firestore.collection(usersPath).doc(user.uid), {
         'fullName': fullName,
         'phone': phone,
-        'contactEmail': email,
         'role': 'livreur',
         'status': 'pending',
         'createdAt': FieldValue.serverTimestamp(),
@@ -134,7 +150,7 @@ class AuthRepository {
         case 'wrong-password':
           return 'Numéro de téléphone ou mot de passe incorrect.';
         case 'email-already-in-use':
-          return 'Un compte existe déjà avec ce numéro de téléphone.';
+          return phoneInUseMessage;
         case 'weak-password':
           return 'Le mot de passe doit contenir au moins 6 caractères.';
         case 'too-many-requests':

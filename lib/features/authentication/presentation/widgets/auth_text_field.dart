@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Champ de saisie utilisé sur les écrans de connexion/inscription : label
 /// discret au-dessus de la valeur, bordure arrondie, préfixe/suffixe
@@ -17,6 +18,9 @@ class AuthTextField extends StatelessWidget {
     this.validator,
     this.autofillHints,
     this.focused = false,
+    this.onchanged,
+    this.textCapitalization = TextCapitalization.none,
+    this.inputFormatters,
   });
 
   final String label;
@@ -28,6 +32,9 @@ class AuthTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
   final Iterable<String>? autofillHints;
+  final Function(String)? onchanged;
+  final TextCapitalization textCapitalization;
+  final List<TextInputFormatter>? inputFormatters;
 
   /// Purely visual: highlights the border like the phone field in the
   /// reference mockup, without needing an actual FocusNode wired up.
@@ -47,7 +54,7 @@ class AuthTextField extends StatelessWidget {
           width: focused ? 1.5 : 1,
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
           if (prefix != null) ...[prefix!, const SizedBox(width: 10)],
@@ -73,6 +80,9 @@ class AuthTextField extends StatelessWidget {
                   style: theme.textTheme.bodyMedium!.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
+                  inputFormatters: inputFormatters,
+                  textCapitalization: textCapitalization,
+                  onChanged: onchanged,
                   decoration: InputDecoration(
                     isDense: true,
                     filled: false,
@@ -93,7 +103,7 @@ class AuthTextField extends StatelessWidget {
               ],
             ),
           ),
-          if (suffix != null) suffix!,
+          ?suffix,
         ],
       ),
     );

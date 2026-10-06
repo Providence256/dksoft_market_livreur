@@ -39,7 +39,7 @@ class AppTheme {
       ),
       elevation: 0,
     ),
-    iconTheme: IconThemeData(color: Colors.white),
+    iconTheme: IconThemeData(color: AppColors.textPrimaryLight),
     textTheme: AppTextTheme.lightTextTheme,
     elevatedButtonTheme: AppElevatedButton.lightElevatedButton,
     outlinedButtonTheme: AppOutlinedButton.lightOutlinedButton,

@@ -3,6 +3,7 @@ import 'package:dksoft_market_livreur/routing/app_router.dart';
 import 'package:dksoft_market_livreur/utils/themes/app_theme.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:toastification/toastification.dart';
 
@@ -25,6 +26,10 @@ class MainApp extends ConsumerWidget {
         debugShowCheckedModeBanner: false,
         title: 'Dksoft-Market-Livreur',
         theme: AppTheme.lightTheme,
+        // App entièrement en français : calendrier, boutons système, etc.
+        locale: const Locale('fr'),
+        supportedLocales: const [Locale('fr'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         routerConfig: goRouter,
       ),
     );

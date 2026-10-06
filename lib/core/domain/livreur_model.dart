@@ -25,10 +25,17 @@ class LivreurModel {
     required this.id,
     required this.fullName,
     required this.phone,
-    required this.commune,
     required this.motoType,
     required this.idType,
     required this.idNumber,
+    this.firstName = '',
+    this.lastName = '',
+    this.idCountry = 'République démocratique du Congo',
+    this.idIssueDate,
+    this.motoMake = '',
+    this.motoModel = '',
+    this.motoColor = '',
+    this.motoYear,
     this.email,
     this.plaque,
     this.idPhotoPath,
@@ -44,11 +51,23 @@ class LivreurModel {
   final String fullName;
   final String phone;
   final String? email;
-  final String commune;
   final String motoType;
   final String? plaque;
   final String idType;
   final String idNumber;
+  final String firstName;
+  final String lastName;
+
+  /// Pays de délivrance de la pièce d'identité.
+  final String idCountry;
+  final DateTime? idIssueDate;
+
+  /// Détail de la moto (l'app ne gère que les motos). [motoType] garde le
+  /// libellé d'affichage « Marque Modèle ».
+  final String motoMake;
+  final String motoModel;
+  final String motoColor;
+  final int? motoYear;
 
   /// Chemin Storage de la photo de la pièce d'identité (et non une URL
   /// publique : c'est un document sensible, seul l'admin doit le lire).
@@ -69,11 +88,21 @@ class LivreurModel {
       'fullName': fullName,
       'phone': phone,
       'email': email,
-      'commune': commune,
       'motoType': motoType,
       'plaque': plaque,
       'idType': idType,
       'idNumber': idNumber,
+      'firstName': firstName,
+      'lastName': lastName,
+      'idCountry': idCountry,
+      'idIssueDate': idIssueDate == null
+          ? null
+          : Timestamp.fromDate(idIssueDate!),
+      'vehicleType': 'moto',
+      'motoMake': motoMake,
+      'motoModel': motoModel,
+      'motoColor': motoColor,
+      'motoYear': motoYear,
       'idPhotoPath': idPhotoPath,
       'status': status.name,
       'disponible': disponible,
@@ -90,11 +119,21 @@ class LivreurModel {
       fullName: map['fullName']?.toString() ?? '',
       phone: map['phone']?.toString() ?? '',
       email: map['email']?.toString(),
-      commune: map['commune']?.toString() ?? '',
       motoType: map['motoType']?.toString() ?? '',
       plaque: map['plaque']?.toString(),
       idType: map['idType']?.toString() ?? '',
       idNumber: map['idNumber']?.toString() ?? '',
+      firstName: map['firstName']?.toString() ?? '',
+      lastName: map['lastName']?.toString() ?? '',
+      idCountry:
+          map['idCountry']?.toString() ?? 'République démocratique du Congo',
+      idIssueDate: map['idIssueDate'] is Timestamp
+          ? (map['idIssueDate'] as Timestamp).toDate()
+          : null,
+      motoMake: map['motoMake']?.toString() ?? '',
+      motoModel: map['motoModel']?.toString() ?? '',
+      motoColor: map['motoColor']?.toString() ?? '',
+      motoYear: (map['motoYear'] as num?)?.toInt(),
       idPhotoPath: map['idPhotoPath']?.toString(),
       status: LivreurStatusX.fromString(map['status']?.toString()),
       disponible: map['disponible'] as bool? ?? false,

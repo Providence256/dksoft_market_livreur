@@ -45,29 +45,37 @@ class AuthController extends AsyncNotifier<void> {
   }
 
   Future<bool> signUp({
-    required String fullName,
+    required String firstName,
+    required String lastName,
     required String phone,
     required String password,
-    required String commune,
-    required String motoType,
+    required String idCountry,
     required String idType,
     required String idNumber,
+    required DateTime idIssueDate,
+    required String motoMake,
+    required String motoModel,
+    required String motoColor,
+    required int motoYear,
     String? plaque,
-    String? email,
   }) async {
     state = const AsyncLoading();
 
     try {
       await _repository.signUp(
-        fullName: fullName,
+        firstName: firstName,
+        lastName: lastName,
         phone: phone,
         password: password,
-        commune: commune,
-        motoType: motoType,
+        idCountry: idCountry,
         idType: idType,
         idNumber: idNumber,
+        idIssueDate: idIssueDate,
+        motoMake: motoMake,
+        motoModel: motoModel,
+        motoColor: motoColor,
+        motoYear: motoYear,
         plaque: plaque,
-        email: email,
       );
       if (!ref.mounted) return false;
       state = const AsyncData(null);
