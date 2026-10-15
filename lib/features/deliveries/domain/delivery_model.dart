@@ -212,6 +212,7 @@ class DeliveryModel {
     this.livreurName,
     this.livreurPhone,
     this.assignedAt,
+    this.deliveredAt,
     this.refusedBy = const [],
     this.createdAt,
   });
@@ -237,6 +238,9 @@ class DeliveryModel {
   final String? livreurPhone;
   final DateTime? assignedAt;
 
+  /// Moment où le colis a été remis au dealer.
+  final DateTime? deliveredAt;
+
   /// Motards qui ont refusé cette course : elle ne leur est plus proposée.
   final List<String> refusedBy;
 
@@ -245,6 +249,22 @@ class DeliveryModel {
 
   int get itemsCount =>
       pickups.fold(0, (total, stop) => total + stop.itemsCount);
+
+  /// Premier arrêt pas encore traité (null si tous le sont).
+  int? get nextPickupIndex {
+    final index = pickups.indexWhere((s) => s.status == PickupStatus.pending);
+    return index < 0 ? null : index;
+  }
+
+  /// Date à laquelle la course compte dans les gains.
+  DateTime? get completedOn => deliveredAt ?? assignedAt ?? createdAt;
+
+  /// Référence courte affichée au motard (#ORD-23891).
+  String get shortRef {
+    final raw = orderId.isEmpty ? id : orderId;
+    final tail = raw.length > 6 ? raw.substring(raw.length - 6) : raw;
+    return '#${tail.toUpperCase()}';
+  }
 
   int get collectedCount =>
       pickups.where((stop) => stop.status == PickupStatus.collected).length;
@@ -267,6 +287,7 @@ class DeliveryModel {
   factory DeliveryModel.fromMap(Map<String, dynamic> map) {
     final rawCreatedAt = map['createdAt'];
     final rawAssignedAt = map['assignedAt'];
+    final rawDeliveredAt = map['deliveredAt'];
     final rawRefusedBy = map['refusedBy'];
     final rawPickups = map['pickups'];
 
@@ -291,6 +312,7 @@ class DeliveryModel {
       livreurName: map['livreurName']?.toString(),
       livreurPhone: map['livreurPhone']?.toString(),
       assignedAt: rawAssignedAt is Timestamp ? rawAssignedAt.toDate() : null,
+      deliveredAt: rawDeliveredAt is Timestamp ? rawDeliveredAt.toDate() : null,
       refusedBy: rawRefusedBy is List
           ? rawRefusedBy.map((e) => e.toString()).toList()
           : const [],

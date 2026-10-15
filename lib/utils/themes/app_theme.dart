@@ -46,6 +46,49 @@ class AppTheme {
     textButtonTheme: AppTextButton.lightTextButton,
     inputDecorationTheme: AppInputDecoration.lightInputDecoration,
     bottomNavigationBarTheme: AppBottomNavigation.lightBottomNavigation,
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 8,
+      shadowColor: AppColors.primary.withValues(alpha: 0.2),
+      height: 70,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      indicatorColor: Colors.transparent,
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => TextStyle(
+          fontSize: 11,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w600
+              : FontWeight.w500,
+          color: states.contains(WidgetState.selected)
+              ? AppColors.primary
+              : AppColors.textSecondaryLight,
+        ),
+      ),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          size: 24,
+          color: states.contains(WidgetState.selected)
+              ? AppColors.primary
+              : AppColors.textSecondaryLight,
+        ),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: AppColors.textPrimaryLight,
+      contentTextStyle: const TextStyle(
+        fontFamily: 'Poppins',
+        fontSize: 13,
+        color: Colors.white,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+    dividerTheme: const DividerThemeData(
+      color: AppColors.dividerLight,
+      space: 1,
+      thickness: 1,
+    ),
   );
 
   static ThemeData darkTheme = ThemeData(

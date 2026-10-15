@@ -9,9 +9,7 @@ class AppOutlinedButton {
     style: OutlinedButton.styleFrom(
       foregroundColor: AppColors.primary,
       side: BorderSide(color: AppColors.primary, width: 1.5),
-      shape: BeveledRectangleBorder(
-        borderRadius: BorderRadius.circular(Sizes.p12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       padding: EdgeInsets.symmetric(horizontal: Sizes.p24, vertical: Sizes.p12),
       textStyle: TextStyle(fontSize: Sizes.p16, fontWeight: FontWeight.w600),
     ),
@@ -21,9 +19,7 @@ class AppOutlinedButton {
     style: OutlinedButton.styleFrom(
       foregroundColor: AppColors.primaryDark,
       side: BorderSide(color: AppColors.primaryDark, width: 1.5),
-      shape: BeveledRectangleBorder(
-        borderRadius: BorderRadius.circular(Sizes.p12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       padding: EdgeInsets.symmetric(horizontal: Sizes.p24, vertical: Sizes.p12),
       textStyle: TextStyle(fontSize: Sizes.p16, fontWeight: FontWeight.w600),
     ),

@@ -48,6 +48,18 @@ class DeliveriesRepository {
         });
   }
 
+  /// Toutes les courses de ce motard (en cours et terminées), en temps
+  /// réel. Sert à l'historique et aux gains de la semaine.
+  Stream<List<DeliveryModel>> watchMyDeliveries(String uid) {
+    return _firestore
+        .collection(deliveriesPath)
+        .where('livreurId', isEqualTo: uid)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs.map(DeliveryModel.fromSnapshot).toList(),
+        );
+  }
+
   Stream<DeliveryModel?> watchDelivery(String id) {
     return _deliveryDoc(id).snapshots().map(
       (doc) => doc.exists ? DeliveryModel.fromSnapshot(doc) : null,
@@ -111,6 +123,87 @@ class DeliveriesRepository {
     }, timeout: const Duration(seconds: 10));
   }
 
+  /// Le motard a récupéré (ou ne peut pas récupérer) l'article d'un
+  /// commerçant. Quand tous les arrêts sont traités, la course passe à
+  /// « en route vers le dealer ».
+  Future<void> markPickup({
+    required String deliveryId,
+    required String uid,
+    required int index,
+    required PickupStatus status,
+  }) {
+    final ref = _deliveryDoc(deliveryId);
+
+    return _firestore.runTransaction((transaction) async {
+      final snap = await transaction.get(ref);
+      if (!snap.exists) {
+        throw const DeliveryException("Cette course n'existe plus.");
+      }
+
+      final delivery = DeliveryModel.fromSnapshot(snap);
+      if (delivery.livreurId != uid) {
+        throw const DeliveryException("Cette course ne vous est pas affectée.");
+      }
+      if (index < 0 || index >= delivery.pickups.length) {
+        throw const DeliveryException('Arrêt introuvable.');
+      }
+
+      final now = Timestamp.now();
+      final pickups = <Map<String, dynamic>>[
+        for (final (i, stop) in delivery.pickups.indexed)
+          if (i == index)
+            {...stop.toMap(), 'status': status.name, 'collectedAt': now}
+          else
+            stop.toMap(),
+      ];
+      final allDone = delivery.pickups.indexed.every(
+        (entry) => entry.$1 == index || entry.$2.status != PickupStatus.pending,
+      );
+
+      transaction.update(ref, {
+        'pickups': pickups,
+        'status': allDone
+            ? DeliveryStatus.enRoute.name
+            : DeliveryStatus.collecting.name,
+      });
+    }, timeout: const Duration(seconds: 10));
+  }
+
+  /// Le colis est remis au dealer : la course est terminée et le motard
+  /// redevient libre. Les gains sont crédités côté serveur.
+  Future<void> completeDelivery({
+    required String deliveryId,
+    required String uid,
+  }) {
+    final ref = _deliveryDoc(deliveryId);
+    final livreurRef = _firestore
+        .collection(AuthRepository.livreursPath)
+        .doc(uid);
+
+    return _firestore.runTransaction((transaction) async {
+      final snap = await transaction.get(ref);
+      if (!snap.exists) {
+        throw const DeliveryException("Cette course n'existe plus.");
+      }
+
+      final delivery = DeliveryModel.fromSnapshot(snap);
+      if (delivery.livreurId != uid) {
+        throw const DeliveryException("Cette course ne vous est pas affectée.");
+      }
+      if (delivery.nextPickupIndex != null) {
+        throw const DeliveryException(
+          "Passez d'abord chez tous les commerçants.",
+        );
+      }
+
+      transaction.update(ref, {
+        'status': DeliveryStatus.delivered.name,
+        'deliveredAt': FieldValue.serverTimestamp(),
+      });
+      transaction.update(livreurRef, {'activeDeliveryId': null});
+    }, timeout: const Duration(seconds: 10));
+  }
+
   /// Le motard refuse : la course ne lui est plus proposée mais reste
   /// disponible pour les autres.
   ///
@@ -157,6 +250,15 @@ final availableDeliveriesProvider =
           .watch(deliveriesRepositoryProvider)
           .watchAvailableDeliveries(uid);
     });
+
+/// Historique du motard connecté : toutes ses courses.
+final myDeliveriesProvider = StreamProvider.autoDispose<List<DeliveryModel>>((
+  ref,
+) {
+  final uid = ref.watch(authStateChangesProvider).value?.uid;
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(deliveriesRepositoryProvider).watchMyDeliveries(uid);
+});
 
 /// Une course précise, en temps réel (détail, course en cours).
 final deliveryByIdProvider = StreamProvider.autoDispose
