@@ -1,4 +1,5 @@
 import 'package:dksoft_market_livreur/core/data/livreur_repository.dart';
+import 'package:dksoft_market_livreur/core/animations/motion.dart';
 import 'package:dksoft_market_livreur/core/widgets/app_card.dart';
 import 'package:dksoft_market_livreur/core/widgets/empty_state.dart';
 import 'package:dksoft_market_livreur/features/dashboard/presentation/availability_controller.dart';
@@ -74,11 +75,10 @@ class AvailableDeliveriesScreen extends ConsumerWidget {
                 ),
                 data: (deliveries) {
                   if (deliveries.isEmpty) {
-                    return const EmptyState(
-                      icon: Icons.two_wheeler,
-                      title: 'Aucune demande pour le moment',
+                    return const RadarEmptyState(
+                      title: 'Recherche de courses…',
                       message:
-                          'Les nouvelles courses apparaissent ici '
+                          'Les nouvelles demandes apparaissent ici '
                           "automatiquement. Gardez l'application ouverte.",
                     );
                   }
@@ -89,17 +89,21 @@ class AvailableDeliveriesScreen extends ConsumerWidget {
                     separatorBuilder: (_, _) => gapH16,
                     itemBuilder: (context, index) {
                       final delivery = deliveries[index];
-                      return DeliveryCard(
-                        delivery: delivery,
-                        loading: loading,
-                        onTap: () => context.pushNamed(
-                          AppRoute.delivery.name,
-                          pathParameters: {'id': delivery.id},
+                      return FadeSlideIn(
+                        key: ValueKey(delivery.id),
+                        delay: Motion.stagger(index),
+                        child: DeliveryCard(
+                          delivery: delivery,
+                          loading: loading,
+                          onTap: () => context.pushNamed(
+                            AppRoute.delivery.name,
+                            pathParameters: {'id': delivery.id},
+                          ),
+                          onAccept: () =>
+                              acceptAndOpenMap(context, ref, delivery.id),
+                          onDecline: () =>
+                              confirmDecline(context, ref, delivery.id),
                         ),
-                        onAccept: () =>
-                            acceptAndOpenMap(context, ref, delivery.id),
-                        onDecline: () =>
-                            confirmDecline(context, ref, delivery.id),
                       );
                     },
                   );

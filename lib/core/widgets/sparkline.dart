@@ -19,14 +19,21 @@ class Sparkline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // La courbe se dessine de gauche à droite à l'apparition.
     return SizedBox(
       height: height,
       width: double.infinity,
-      child: CustomPaint(
-        painter: _SparklinePainter(
-          values: values,
-          lineColor: lineColor,
-          dotColor: dotColor,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 1500),
+        curve: Curves.easeOutCubic,
+        builder: (context, progress, _) => CustomPaint(
+          painter: _SparklinePainter(
+            values: values,
+            lineColor: lineColor,
+            dotColor: dotColor,
+            progress: progress,
+          ),
         ),
       ),
     );
@@ -38,11 +45,13 @@ class _SparklinePainter extends CustomPainter {
     required this.values,
     required this.lineColor,
     required this.dotColor,
+    required this.progress,
   });
 
   final List<double> values;
   final Color lineColor;
   final Color dotColor;
+  final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -77,8 +86,11 @@ class _SparklinePainter extends CustomPainter {
       path.cubicTo(midX, previous.dy, midX, current.dy, current.dx, current.dy);
     }
 
+    final metric = path.computeMetrics().first;
+    final drawn = metric.length * progress;
+
     canvas.drawPath(
-      path,
+      metric.extractPath(0, drawn),
       Paint()
         ..color = lineColor
         ..style = PaintingStyle.stroke
@@ -87,7 +99,7 @@ class _SparklinePainter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round,
     );
 
-    final end = points.last;
+    final end = metric.getTangentForOffset(drawn)?.position ?? points.last;
     canvas.drawCircle(end, 5.5, Paint()..color = Colors.white);
     canvas.drawCircle(end, 4, Paint()..color = dotColor);
   }
@@ -96,5 +108,6 @@ class _SparklinePainter extends CustomPainter {
   bool shouldRepaint(_SparklinePainter old) =>
       old.values != values ||
       old.lineColor != lineColor ||
-      old.dotColor != dotColor;
+      old.dotColor != dotColor ||
+      old.progress != progress;
 }

@@ -1,9 +1,9 @@
+import 'package:dksoft_market_livreur/core/animations/motion.dart';
 import 'package:dksoft_market_livreur/core/data/livreur_repository.dart';
 import 'package:dksoft_market_livreur/core/domain/livreur_model.dart';
 import 'package:dksoft_market_livreur/core/widgets/app_card.dart';
 import 'package:dksoft_market_livreur/core/widgets/section_title.dart';
 import 'package:dksoft_market_livreur/core/widgets/sparkline.dart';
-import 'package:dksoft_market_livreur/core/widgets/square_icon_button.dart';
 import 'package:dksoft_market_livreur/core/widgets/weekly_bar_chart.dart';
 import 'package:dksoft_market_livreur/features/dashboard/presentation/availability_controller.dart';
 import 'package:dksoft_market_livreur/features/deliveries/data/deliveries_repository.dart';
@@ -16,6 +16,7 @@ import 'package:dksoft_market_livreur/routing/app_router.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_sizes.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -82,102 +83,76 @@ class _DashboardBody extends ConsumerWidget {
         Sizes.p24,
       ),
       children: [
-        // ---- Salutation + cloche ----
-        Row(
-          children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: AppColors.secondary,
-              child: Text(
-                initialsOf(livreur.fullName),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 17,
-                ),
-              ),
-            ),
-            gapW12,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Bon retour !',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: AppColors.textSecondaryLight,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  Text(
-                    livreur.fullName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontSize: 20,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SquareIconButton(
-              icon: Icons.notifications_rounded,
-              tooltip: 'Demandes de course',
-              showDot: availableCount > 0,
-              onPressed: () =>
-                  ref.read(shellIndexProvider.notifier).select(kTabDeliveries),
-            ),
-          ],
+        // ---- Carte d'accueil : salutation, gains, disponibilité ----
+        FadeSlideIn(
+          child: _HeroCard(
+            livreur: livreur,
+            stats: stats,
+            availableCount: availableCount,
+            series: _cumulative(stats.dailyEarnings),
+          ),
         ),
         gapH16,
-        _AvailabilityCard(disponible: livreur.disponible),
-        gapH12,
 
-        // ---- Gains + livraisons (courbes) ----
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                label: 'Gains',
-                value: shortUsd(stats.totalEarnings),
-                series: _cumulative(stats.dailyEarnings),
-                delta: stats.earningsDelta,
-              ),
-            ),
-            gapW12,
-            Expanded(
-              child: _StatCard(
-                label: 'Livraisons',
-                value: '${stats.totalCount}',
-                series: _cumulative(
-                  stats.dailyCounts.map((e) => e.toDouble()).toList(),
+        // ---- Livraisons + demandes ----
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 120),
+          child: Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  label: 'Livraisons',
+                  value: '${stats.totalCount}',
+                  series: _cumulative(
+                    stats.dailyCounts.map((e) => e.toDouble()).toList(),
+                  ),
+                  delta: stats.countDelta,
                 ),
-                delta: stats.countDelta,
               ),
-            ),
-          ],
+              gapW12,
+              Expanded(
+                child: _QueueCard(
+                  count: availableCount,
+                  onTap: () => ref
+                      .read(shellIndexProvider.notifier)
+                      .select(kTabDeliveries),
+                ),
+              ),
+            ],
+          ),
         ),
         gapH24,
 
         // ---- Gains de la semaine ----
-        Text('Gains de la semaine', style: theme.textTheme.titleLarge),
-        gapH12,
-        AppCard(
-          padding: const EdgeInsets.fromLTRB(
-            Sizes.p12,
-            Sizes.p48,
-            Sizes.p12,
-            Sizes.p16,
-          ),
-          child: WeeklyBarChart(
-            values: stats.dailyEarnings,
-            valueLabel: shortUsd,
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 220),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Gains de la semaine', style: theme.textTheme.titleLarge),
+              gapH12,
+              AppCard(
+                padding: const EdgeInsets.fromLTRB(
+                  Sizes.p12,
+                  Sizes.p48,
+                  Sizes.p12,
+                  Sizes.p16,
+                ),
+                child: WeeklyBarChart(
+                  values: stats.dailyEarnings,
+                  valueLabel: shortUsd,
+                ),
+              ),
+            ],
           ),
         ),
         gapH24,
 
         // ---- Course en cours ou demandes ----
-        _MissionSection(livreur: livreur),
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 320),
+          child: _MissionSection(livreur: livreur),
+        ),
       ],
     );
   }
@@ -192,15 +167,26 @@ class _DashboardBody extends ConsumerWidget {
   }
 }
 
-class _AvailabilityCard extends ConsumerWidget {
-  const _AvailabilityCard({required this.disponible});
+/// Grande carte marine du haut : salutation, gains de la semaine qui
+/// défilent, courbe qui se dessine, et la disponibilité du livreur.
+class _HeroCard extends ConsumerWidget {
+  const _HeroCard({
+    required this.livreur,
+    required this.stats,
+    required this.availableCount,
+    required this.series,
+  });
 
-  final bool disponible;
+  final LivreurModel livreur;
+  final WeekStats stats;
+  final int availableCount;
+  final List<double> series;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+    final disponible = livreur.disponible;
     final isLoading = ref.watch(availabilityControllerProvider).isLoading;
+    final delta = stats.earningsDelta;
 
     ref.listen<AsyncValue<void>>(availabilityControllerProvider, (_, next) {
       if (next.hasError) {
@@ -210,47 +196,336 @@ class _AvailabilityCard extends ConsumerWidget {
       }
     });
 
-    return AppCard(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Sizes.p16,
-        vertical: Sizes.p8,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 11,
-            height: 11,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: disponible ? AppColors.success : AppColors.textHintLight,
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primaryLight,
+            AppColors.primary,
+            AppColors.primaryDark,
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.38),
+            blurRadius: 34,
+            offset: const Offset(0, 18),
           ),
-          gapW12,
-          Expanded(
-            child: Text(
-              disponible ? 'Vous êtes disponible' : 'Vous êtes indisponible',
-              style: theme.textTheme.bodyMedium,
-            ),
-          ),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.all(14),
-              child: SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.4),
-              ),
-            )
-          else
-            Switch.adaptive(
-              value: disponible,
-              activeThumbColor: Colors.white,
-              activeTrackColor: AppColors.primary,
-              onChanged: (value) => ref
-                  .read(availabilityControllerProvider.notifier)
-                  .setDisponible(value),
-            ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ---- Salutation + cloche ----
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(2.5),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.55),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: AppColors.secondary.withValues(
+                        alpha: .7,
+                      ),
+                      child: Text(
+                        initialsOf(livreur.fullName),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  gapW12,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bon retour,',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 12.5,
+                          ),
+                        ),
+                        Text(
+                          livreur.fullName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Pressable(
+                    onTap: () => ref
+                        .read(shellIndexProvider.notifier)
+                        .select(kTabDeliveries),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.notifications_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                        if (availableCount > 0)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              width: 13,
+                              height: 13,
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.primary,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+
+              // ---- Gains de la semaine ----
+              Row(
+                children: [
+                  Text(
+                    'Gains cette semaine',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.72),
+                      fontSize: 13,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (delta != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            (delta >= 0
+                                    ? const Color(0xFF2BC275)
+                                    : AppColors.error)
+                                .withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            delta >= 0
+                                ? Icons.trending_up_rounded
+                                : Icons.trending_down_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${delta >= 0 ? '+' : ''}'
+                            '${delta.toStringAsFixed(0)}%',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              CountUp(
+                value: stats.totalEarnings,
+                format: shortUsd,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 38,
+                  fontWeight: FontWeight.w800,
+                  height: 1.15,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Sparkline(
+                values: series.length >= 2 ? series : const [0, 0],
+                lineColor: AppColors.secondaryLight,
+                dotColor: AppColors.secondary,
+                height: 56,
+              ),
+              const SizedBox(height: 14),
+
+              // ---- Disponibilité ----
+              Container(
+                padding: const EdgeInsets.fromLTRB(14, 4, 8, 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.18),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    PulsingDot(
+                      color: disponible
+                          ? const Color(0xFF3DDC8B)
+                          : Colors.white.withValues(alpha: 0.5),
+                      size: 9,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Text(
+                          disponible
+                              ? 'Vous êtes disponible'
+                              : 'Vous êtes indisponible',
+                          key: ValueKey(disponible),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (isLoading)
+                      const Padding(
+                        padding: EdgeInsets.all(14),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    else
+                      Switch.adaptive(
+                        value: disponible,
+                        activeThumbColor: Colors.white,
+                        activeTrackColor: AppColors.success,
+                        onChanged: (value) {
+                          HapticFeedback.mediumImpact();
+                          ref
+                              .read(availabilityControllerProvider.notifier)
+                              .setDisponible(value);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Demandes en attente : un compteur qui mène à l'onglet Demandes.
+class _QueueCard extends StatelessWidget {
+  const _QueueCard({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasRequests = count > 0;
+
+    return AppCard(
+      onTap: onTap,
+      gradient: hasRequests
+          ? const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.secondaryLight, AppColors.secondary],
+            )
+          : null,
+      borderColor: hasRequests ? Colors.transparent : const Color(0x14103166),
+      padding: const EdgeInsets.all(Sizes.p16),
+      child: SizedBox(
+        height: 96,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.two_wheeler_rounded,
+                  size: 22,
+                  color: hasRequests ? Colors.white : AppColors.primary,
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.arrow_outward_rounded,
+                  size: 18,
+                  color: hasRequests ? Colors.white : AppColors.textHintLight,
+                ),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+                height: 1,
+                color: hasRequests ? Colors.white : AppColors.textPrimaryLight,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              count > 1 ? 'demandes en attente' : 'demande en attente',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: hasRequests
+                    ? Colors.white.withValues(alpha: 0.9)
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

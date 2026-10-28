@@ -55,70 +55,84 @@ class _WeeklyBarChartState extends State<WeeklyBarChart> {
                           final barHeight = box.maxHeight * factor;
                           final selected = i == _selected;
 
-                          return Stack(
-                            clipBehavior: Clip.none,
-                            alignment: Alignment.bottomCenter,
-                            children: [
-                              Container(
-                                width: 30,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F3F7),
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                              ),
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
-                                width: 30,
-                                height: barHeight,
-                                decoration: BoxDecoration(
-                                  color: selected
-                                      ? AppColors.secondary
-                                      : AppColors.primary,
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                              ),
-                              if (selected)
-                                Positioned(
-                                  bottom: barHeight + 6,
-                                  left: -30,
-                                  right: -30,
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 5,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.textPrimaryLight,
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          widget.valueLabel(value),
-                                          maxLines: 1,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        width: 6,
-                                        height: 6,
-                                        margin: const EdgeInsets.only(top: 3),
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.textPrimaryLight,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    ],
+                          return TweenAnimationBuilder<double>(
+                            tween: Tween<double>(begin: 0, end: barHeight),
+                            duration: Duration(milliseconds: 650 + i * 90),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, h, _) => Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.bottomCenter,
+                              children: [
+                                Container(
+                                  width: 30,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F3F7),
+                                    borderRadius: BorderRadius.circular(15),
                                   ),
                                 ),
-                            ],
+                                Container(
+                                  width: 30,
+                                  height: h,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: selected
+                                          ? const [
+                                              AppColors.secondaryLight,
+                                              AppColors.secondary,
+                                            ]
+                                          : const [
+                                              AppColors.primaryLight,
+                                              AppColors.primary,
+                                            ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                ),
+                                if (selected)
+                                  Positioned(
+                                    bottom: h + 6,
+                                    left: -30,
+                                    right: -30,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.textPrimaryLight,
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            widget.valueLabel(value),
+                                            maxLines: 1,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          width: 6,
+                                          height: 6,
+                                          margin: const EdgeInsets.only(top: 3),
+                                          decoration: const BoxDecoration(
+                                            color: AppColors.textPrimaryLight,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
                           );
                         },
                       ),

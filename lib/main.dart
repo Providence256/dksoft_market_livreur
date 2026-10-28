@@ -26,7 +26,6 @@ class MainApp extends ConsumerWidget {
         debugShowCheckedModeBanner: false,
         title: 'Dksoft-Market-Livreur',
         theme: AppTheme.lightTheme,
-        // App entièrement en français : calendrier, boutons système, etc.
         locale: const Locale('fr'),
         supportedLocales: const [Locale('fr'), Locale('en')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,

@@ -6,12 +6,67 @@ import 'package:dksoft_market_livreur/features/deliveries/presentation/delivery_
 import 'package:dksoft_market_livreur/features/map/presentation/delivery_map_screen.dart';
 import 'package:dksoft_market_livreur/features/shell/presentation/main_shell.dart';
 import 'package:dksoft_market_livreur/routing/go_router_refresh_stream.dart';
+import 'package:dksoft_market_livreur/core/animations/motion.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 enum AppRoute { home, login, signup, delivery, deliveryMap }
 
 const _publicPaths = ['/login', '/signup'];
+
+/// Transition commune : le nouvel écran monte en fondu pendant que l'ancien
+/// recule et s'estompe légèrement.
+/// [sheet] : l'écran monte du bas comme une feuille, sans fondu ni zoom
+/// (les écrans qui contiennent une carte native n'aiment pas les fondus).
+CustomTransitionPage<void> _page(
+  GoRouterState state,
+  Widget child, {
+  bool sheet = false,
+}) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 480),
+    reverseTransitionDuration: const Duration(milliseconds: 340),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Motion.emphasized,
+        reverseCurve: Curves.easeInCubic,
+      );
+      if (sheet) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 1),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        );
+      }
+      final behind = CurvedAnimation(
+        parent: secondaryAnimation,
+        curve: Curves.easeOut,
+      );
+      return ScaleTransition(
+        scale: Tween<double>(begin: 1, end: 0.95).animate(behind),
+        child: FadeTransition(
+          opacity: Tween<double>(begin: 1, end: 0.55).animate(behind),
+          child: FadeTransition(
+            opacity: curved,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.07),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final authRepository = ref.watch(authRepositoryProvider);
@@ -38,31 +93,42 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home',
         name: AppRoute.home.name,
-        builder: (context, state) => const RoleGuard(child: MainShell()),
+        pageBuilder: (context, state) =>
+            _page(state, const RoleGuard(child: MainShell())),
       ),
       GoRoute(
         path: '/delivery/:id',
         name: AppRoute.delivery.name,
-        builder: (context, state) => RoleGuard(
-          child: DeliveryDetailScreen(deliveryId: state.pathParameters['id']!),
+        pageBuilder: (context, state) => _page(
+          state,
+          RoleGuard(
+            child: DeliveryDetailScreen(
+              deliveryId: state.pathParameters['id']!,
+            ),
+          ),
+          sheet: true,
         ),
       ),
       GoRoute(
         path: '/delivery/:id/map',
         name: AppRoute.deliveryMap.name,
-        builder: (context, state) => RoleGuard(
-          child: DeliveryMapScreen(deliveryId: state.pathParameters['id']!),
+        pageBuilder: (context, state) => _page(
+          state,
+          RoleGuard(
+            child: DeliveryMapScreen(deliveryId: state.pathParameters['id']!),
+          ),
+          sheet: true,
         ),
       ),
       GoRoute(
         path: '/login',
         name: AppRoute.login.name,
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => _page(state, const LoginScreen()),
       ),
       GoRoute(
         path: '/signup',
         name: AppRoute.signup.name,
-        builder: (context, state) => const SignUpScreen(),
+        pageBuilder: (context, state) => _page(state, const SignUpScreen()),
       ),
     ],
   );

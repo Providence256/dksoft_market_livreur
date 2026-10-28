@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:dksoft_market_livreur/core/data/livreur_repository.dart';
+import 'package:dksoft_market_livreur/core/widgets/delivery_celebration.dart';
 import 'package:dksoft_market_livreur/features/deliveries/data/deliveries_repository.dart';
 import 'package:dksoft_market_livreur/features/deliveries/domain/delivery_model.dart';
 import 'package:dksoft_market_livreur/features/map/data/location_repository.dart';
@@ -590,9 +591,15 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen>
   }
 
   Future<void> _complete(DeliveryModel delivery) async {
+    // La carte disparaît dès que la course est terminée : on garde le
+    // navigateur et le gain pour pouvoir fêter la fin malgré tout.
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final fee = delivery.deliveryFee;
+
     final ok = await ref
         .read(deliveryActionControllerProvider.notifier)
         .complete(delivery.id);
+    if (ok) showDeliveryCelebration(navigator, amount: fee);
     if (!mounted) return;
 
     if (!ok) {
@@ -605,7 +612,6 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen>
     _simPosition = null;
     _navigating = false;
     _fullScreen.set(false);
-    _showMessage('Livraison terminée. Merci !');
     // Ouverte depuis l'écran de détail : on revient en arrière. Dans
     // l'onglet, la carte repasse seule aux demandes (plus de course active).
     if (!widget.embedded && context.canPop()) context.pop();

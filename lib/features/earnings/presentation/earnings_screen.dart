@@ -10,6 +10,7 @@ import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_sizes.dart';
 import 'package:dksoft_market_livreur/utils/formatters/currency_formatter.dart';
 import 'package:dksoft_market_livreur/utils/formatters/date_formatter_fr.dart';
+import 'package:dksoft_market_livreur/core/animations/motion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -45,7 +46,7 @@ class EarningsScreen extends ConsumerWidget {
 
             return ListView(
               padding: const EdgeInsets.all(Sizes.p16),
-              children: [
+              children: staggerIn([
                 // ---- Total de la semaine ----
                 Container(
                   padding: const EdgeInsets.all(Sizes.p20),
@@ -116,7 +117,7 @@ class EarningsScreen extends ConsumerWidget {
                     _HistoryTile(delivery: delivery),
                     gapH8,
                   ],
-              ],
+              ]),
             );
           },
         ),

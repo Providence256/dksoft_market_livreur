@@ -1,3 +1,4 @@
+import 'package:dksoft_market_livreur/core/animations/motion.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/auth_controller.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/auth_text_field.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/phone_prefix.dart';
@@ -77,19 +78,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Dksoft\nLivreur',
-                      style: theme.textTheme.headlineLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        height: 1.15,
+                    FadeSlideIn(
+                      child: Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary.withValues(alpha: .7),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: const Icon(
+                          Icons.two_wheeler_rounded,
+                          color: Colors.white,
+                          size: 30,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 120),
+                      child: Text(
+                        'Dksoft\nLivreur',
+                        style: theme.textTheme.headlineLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
-                    Text(
-                      'Livrez à Kinshasa, soyez payé après chaque course.',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.5),
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 240),
+                      child: Text(
+                        'Livrez à Kinshasa, soyez payé après chaque course.',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.6),
+                        ),
                       ),
                     ),
                   ],
@@ -98,142 +121,155 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             Expanded(
               flex: 8,
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                ),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(
-                    24,
-                    12,
-                    24,
-                    MediaQuery.viewInsetsOf(context).bottom + 24,
+              child: FadeSlideIn(
+                offset: const Offset(0, 0.22),
+                delay: const Duration(milliseconds: 200),
+                duration: const Duration(milliseconds: 900),
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
                   ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 40,
-                            height: 4,
-                            margin: const EdgeInsets.only(bottom: 20),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade300,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-                        Text(
-                          'Se connecter',
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Votre numéro de téléphone',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        AuthTextField(
-                          label: 'TÉLÉPHONE',
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          focused: true,
-                          hintText: '995 415 641',
-                          autofillHints: const [AutofillHints.telephoneNumber],
-                          prefix: const PhonePrefix(),
-                          validator: (value) {
-                            final digits = (value ?? '').replaceAll(
-                              RegExp(r'[^0-9]'),
-                              '',
-                            );
-                            return digits.length < 9
-                                ? 'Numéro de téléphone invalide'
-                                : null;
-                          },
-                        ),
-                        const SizedBox(height: 14),
-                        AuthTextField(
-                          label: 'MOT DE PASSE',
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          prefix: Icon(
-                            Icons.lock_outline_rounded,
-                            color: Colors.grey[500],
-                          ),
-                          suffix: IconButton(
-                            onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            ),
-                            icon: HugeIcon(
-                              color: AppColors.primary,
-                              icon: _obscurePassword
-                                  ? HugeIcons.strokeRoundedViewOffSlash
-                                  : HugeIcons.strokeRoundedView,
-                            ),
-                          ),
-                          validator: (value) => (value ?? '').length < 6
-                              ? 'Au moins 6 caractères'
-                              : null,
-                        ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: isLoading ? null : _submit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                            ),
-                            child: isLoading
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.4,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Text(
-                                    'Se connecter',
-                                    style: theme.textTheme.bodyLarge!.copyWith(
-                                      color: Colors.white,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Center(
-                          child: RichText(
-                            text: TextSpan(
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      12,
+                      24,
+                      MediaQuery.viewInsetsOf(context).bottom + 24,
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 40,
+                              height: 4,
+                              margin: const EdgeInsets.only(bottom: 20),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade300,
+                                borderRadius: BorderRadius.circular(4),
                               ),
-                              children: [
-                                const TextSpan(text: 'Pas encore de compte ? '),
-                                TextSpan(
-                                  text: 'Devenir livreur',
-                                  style: const TextStyle(
-                                    color: AppColors.secondary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  recognizer: TapGestureRecognizer()
-                                    ..onTap = () =>
-                                        context.pushNamed(AppRoute.signup.name),
-                                ),
-                              ],
                             ),
                           ),
-                        ),
-                      ],
+                          Text(
+                            'Se connecter',
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Votre numéro de téléphone',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          AuthTextField(
+                            label: 'TÉLÉPHONE',
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            focused: true,
+                            hintText: '995 415 641',
+                            autofillHints: const [
+                              AutofillHints.telephoneNumber,
+                            ],
+                            prefix: const PhonePrefix(),
+                            validator: (value) {
+                              final digits = (value ?? '').replaceAll(
+                                RegExp(r'[^0-9]'),
+                                '',
+                              );
+                              return digits.length < 9
+                                  ? 'Numéro de téléphone invalide'
+                                  : null;
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          AuthTextField(
+                            label: 'MOT DE PASSE',
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            prefix: Icon(
+                              Icons.lock_outline_rounded,
+                              color: Colors.grey[500],
+                            ),
+                            suffix: IconButton(
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                              icon: HugeIcon(
+                                color: AppColors.primary,
+                                icon: _obscurePassword
+                                    ? HugeIcons.strokeRoundedViewOffSlash
+                                    : HugeIcons.strokeRoundedView,
+                              ),
+                            ),
+                            validator: (value) => (value ?? '').length < 6
+                                ? 'Au moins 6 caractères'
+                                : null,
+                          ),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: isLoading ? null : _submit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.4,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Se connecter',
+                                      style: theme.textTheme.bodyLarge!
+                                          .copyWith(
+                                            color: Colors.white,
+                                            fontSize: 15,
+                                          ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Center(
+                            child: RichText(
+                              text: TextSpan(
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                                children: [
+                                  const TextSpan(
+                                    text: 'Pas encore de compte ? ',
+                                  ),
+                                  TextSpan(
+                                    text: 'Devenir livreur',
+                                    style: const TextStyle(
+                                      color: AppColors.secondary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () => context.pushNamed(
+                                        AppRoute.signup.name,
+                                      ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -245,3 +281,5 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 }
+
+/// Halos de couleur flous derrière le titre.

@@ -6,6 +6,7 @@ import 'package:dksoft_market_livreur/features/authentication/data/auth_reposito
 import 'package:dksoft_market_livreur/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_sizes.dart';
+import 'package:dksoft_market_livreur/core/animations/motion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -49,7 +50,7 @@ class ProfileScreen extends ConsumerWidget {
             ? const Center(child: CircularProgressIndicator())
             : ListView(
                 padding: const EdgeInsets.all(Sizes.p16),
-                children: [
+                children: staggerIn([
                   Column(
                     children: [
                       CircleAvatar(
@@ -135,7 +136,7 @@ class ProfileScreen extends ConsumerWidget {
                       label: const Text('Se déconnecter'),
                     ),
                   ),
-                ],
+                ]),
               ),
       ),
     );

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dksoft_market_livreur/features/deliveries/data/deliveries_repository.dart';
 import 'package:dksoft_market_livreur/features/deliveries/domain/delivery_model.dart';
+import 'package:geolocator/geolocator.dart';
 
 // ============================================================
 // OUTIL DE TEST — À SUPPRIMER.
@@ -113,24 +114,39 @@ const _scenarios = <_Scenario>[
 
 final _random = Random();
 
-/// Point proche du centre de la commune, décalé au hasard (~300 m) pour
-/// que deux lieux de la même commune n'aient pas les mêmes coordonnées.
-(double, double) _coordsFor(String commune) {
-  final center = _communeCenters[commune] ?? (-4.3250, 15.3222);
-  return (
-    center.$1 + (_random.nextDouble() - 0.5) * 0.006,
-    center.$2 + (_random.nextDouble() - 0.5) * 0.006,
-  );
+/// Position de départ des courses de test : la position réelle du motard
+/// (repli sur Gombe si le GPS n'est pas disponible).
+Future<(double, double)> _riderOrigin() async {
+  try {
+    final p =
+        await Geolocator.getLastKnownPosition() ??
+        await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            timeLimit: Duration(seconds: 6),
+          ),
+        );
+    return (p.latitude, p.longitude);
+  } catch (_) {
+    return _communeCenters['Gombe']!;
+  }
+}
+
+/// Point situé à [meters] mètres de [from], dans une direction au hasard.
+(double, double) _offset((double, double) from, double meters) {
+  final angle = _random.nextDouble() * 2 * pi;
+  final dLat = meters * cos(angle) / 111320;
+  final dLng = meters * sin(angle) / (111320 * cos(from.$1 * pi / 180));
+  return (from.$1 + dLat, from.$2 + dLng);
 }
 
 DeliveryPlace _place({
+  required (double, double) coords,
   required String name,
   required String address,
   required String commune,
   String reference = '',
   String? phone,
 }) {
-  final coords = _coordsFor(commune);
   return DeliveryPlace(
     name: name,
     address: address,
@@ -146,6 +162,16 @@ DeliveryPlace _place({
 Future<void> createTestDelivery() async {
   final scenario = _scenarios[_random.nextInt(_scenarios.length)];
 
+  // Course courte (≈ 1 à 3 minutes) : chaque arrêt est à 250–550 m du
+  // précédent, en partant de la position réelle du motard.
+  var cursor = await _riderOrigin();
+  final merchantCoords = <(double, double)>[];
+  for (final _ in scenario.merchants) {
+    cursor = _offset(cursor, 250 + _random.nextDouble() * 300);
+    merchantCoords.add(cursor);
+  }
+  final dropoffCoords = _offset(cursor, 250 + _random.nextDouble() * 300);
+
   final delivery = DeliveryModel(
     id: '',
     orderId: 'TEST-${_random.nextInt(90000) + 10000}',
@@ -156,6 +182,7 @@ Future<void> createTestDelivery() async {
         PickupStop(
           merchantId: 'test-merchant-$index',
           place: _place(
+            coords: merchantCoords[index],
             name: merchant.name,
             address: merchant.address,
             commune: merchant.commune,
@@ -168,6 +195,7 @@ Future<void> createTestDelivery() async {
         ),
     ],
     dropoff: _place(
+      coords: dropoffCoords,
       name: scenario.dealerName,
       address: scenario.dealerAddress,
       commune: scenario.dealerCommune,
