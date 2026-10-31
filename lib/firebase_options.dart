@@ -56,13 +56,12 @@ class DefaultFirebaseOptions {
     projectId: 'dksoft-market',
     storageBucket: 'dksoft-market.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDZD4gAYRDbC7pr52842UGVTUDmFBRVHcU',
-    appId: '1:894362509654:ios:f78547350f944453da36f7',
+    appId: '1:894362509654:ios:9bb9ac641ad67251da36f7',
     messagingSenderId: '894362509654',
     projectId: 'dksoft-market',
     storageBucket: 'dksoft-market.firebasestorage.app',
-    iosBundleId: 'com.example.dksoftMarketLivreur',
+    iosBundleId: 'com.providence.dksoftMarketLivreur',
   );
 }

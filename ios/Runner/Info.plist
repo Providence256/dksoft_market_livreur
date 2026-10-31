@@ -26,14 +26,14 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>GMSApiKey</key>
 	<string>$(MAPS_API_KEY)</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Votre position sert à afficher votre trajet vers les commerçants et le dealer.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Pour photographier votre pièce d'identité.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Pour choisir la photo de votre pièce d'identité.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Pour photographier votre pièce d'identité.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Votre position sert à afficher votre trajet vers les commerçants et le dealer.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Pour choisir la photo de votre pièce d'identité.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -57,6 +57,10 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

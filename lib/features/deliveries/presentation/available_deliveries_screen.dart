@@ -1,10 +1,13 @@
-import 'package:dksoft_market_livreur/core/data/livreur_repository.dart';
+import 'package:dksoft_market_livreur/features/deliveries/presentation/widgets/delivery_list_skeleton.dart';
 import 'package:dksoft_market_livreur/core/animations/motion.dart';
-import 'package:dksoft_market_livreur/core/widgets/app_card.dart';
+import 'package:dksoft_market_livreur/utils/themes/app_palette.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_icon.dart';
+import 'package:dksoft_market_livreur/core/data/livreur_repository.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_button.dart';
 import 'package:dksoft_market_livreur/core/widgets/empty_state.dart';
+import 'package:dksoft_market_livreur/core/widgets/pill.dart';
 import 'package:dksoft_market_livreur/features/dashboard/presentation/availability_controller.dart';
 import 'package:dksoft_market_livreur/features/deliveries/data/deliveries_repository.dart';
-import 'package:dksoft_market_livreur/features/deliveries/presentation/debug_delivery_seeder.dart';
 import 'package:dksoft_market_livreur/features/deliveries/presentation/delivery_action_controller.dart';
 import 'package:dksoft_market_livreur/features/deliveries/presentation/delivery_actions.dart';
 import 'package:dksoft_market_livreur/features/deliveries/presentation/delivery_card.dart';
@@ -12,7 +15,6 @@ import 'package:dksoft_market_livreur/features/shell/presentation/main_shell.dar
 import 'package:dksoft_market_livreur/routing/app_router.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_sizes.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,43 +36,51 @@ class AvailableDeliveriesScreen extends ConsumerWidget {
     );
     final deliveriesAsync = ref.watch(availableDeliveriesProvider);
     final loading = ref.watch(deliveryActionControllerProvider).isLoading;
+    final count = deliveriesAsync.value?.length ?? 0;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Demandes de course'),
-        actions: [
-          // Outil de test : n'existe qu'en debug. À supprimer avec
-          // debug_delivery_seeder.dart quand les vraies courses arrivent.
-          if (kDebugMode)
-            IconButton(
-              tooltip: 'Créer une course de test',
-              icon: const Icon(Icons.add_circle_outline),
-              color: AppColors.textPrimaryLight,
-              onPressed: () async {
-                await createTestDelivery();
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Course de test créée.')),
-                );
-              },
-            ),
-        ],
+        title: Row(
+          children: [
+            const Text('Demandes'),
+            if (disponible && activeDeliveryId == null && count > 0) ...[
+              gapW8,
+              Pill(label: '$count', tone: PillTone.accent),
+            ],
+          ],
+        ),
+        actions: [gapW8],
       ),
       body: SafeArea(
         child: activeDeliveryId != null
-            ? const _ActiveNotice()
+            ? EmptyState(
+                icon: AppIcons.moto,
+                color: AppColors.secondary,
+                title: 'Une course est en cours',
+                message: "Terminez-la avant d'en prendre une autre.",
+                action: AppButton(
+                  label: 'Ouvrir la carte',
+                  icon: AppIcons.map,
+                  variant: AppButtonVariant.accent,
+                  expand: false,
+                  onPressed: () =>
+                      ref.read(shellIndexProvider.notifier).select(kTabMap),
+                ),
+              )
             : !disponible
             ? const _UnavailableState()
             : deliveriesAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const DeliveryListSkeleton(),
                 error: (_, _) => EmptyState(
-                  icon: Icons.wifi_off_rounded,
+                  icon: AppIcons.offline,
                   title: 'Impossible de charger les courses',
                   message: 'Vérifiez votre connexion internet.',
-                  action: OutlinedButton(
+                  action: AppButton(
+                    label: 'Réessayer',
+                    variant: AppButtonVariant.tonal,
+                    expand: false,
                     onPressed: () =>
                         ref.invalidate(availableDeliveriesProvider),
-                    child: const Text('Réessayer'),
                   ),
                 ),
                 data: (deliveries) {
@@ -84,9 +94,14 @@ class AvailableDeliveriesScreen extends ConsumerWidget {
                   }
 
                   return ListView.separated(
-                    padding: const EdgeInsets.all(Sizes.p16),
+                    padding: const EdgeInsets.fromLTRB(
+                      Sizes.screenPadding,
+                      Sizes.p4,
+                      Sizes.screenPadding,
+                      Sizes.p24,
+                    ),
                     itemCount: deliveries.length,
-                    separatorBuilder: (_, _) => gapH16,
+                    separatorBuilder: (_, _) => gapH12,
                     itemBuilder: (context, index) {
                       final delivery = deliveries[index];
                       return FadeSlideIn(
@@ -122,78 +137,18 @@ class _UnavailableState extends ConsumerWidget {
     final isLoading = ref.watch(availabilityControllerProvider).isLoading;
 
     return EmptyState(
-      icon: Icons.pause_circle_outline_rounded,
-      title: 'Vous êtes indisponible',
+      icon: AppIcons.pause,
+      color: context.palette.textSecondary,
+      title: 'Vous êtes hors ligne',
       message: 'Passez disponible pour voir et prendre des courses.',
-      action: ElevatedButton(
-        onPressed: isLoading
-            ? null
-            : () => ref
-                  .read(availabilityControllerProvider.notifier)
-                  .setDisponible(true),
-        child: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.4,
-                  color: Colors.white,
-                ),
-              )
-            : const Text('Me mettre disponible'),
-      ),
-    );
-  }
-}
-
-/// Une seule course à la fois : tant qu'elle est en cours, l'onglet y
-/// renvoie au lieu de proposer d'autres demandes.
-class _ActiveNotice extends ConsumerWidget {
-  const _ActiveNotice();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.all(Sizes.p16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AppCard(
-            borderColor: AppColors.secondary,
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.two_wheeler_rounded,
-                  size: 40,
-                  color: AppColors.secondary,
-                ),
-                gapH12,
-                Text(
-                  'Une course est en cours',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                gapH4,
-                Text(
-                  "Terminez-la avant d'en prendre une autre.",
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: AppColors.textSecondaryLight,
-                  ),
-                ),
-                gapH16,
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () =>
-                        ref.read(shellIndexProvider.notifier).select(kTabMap),
-                    icon: const Icon(Icons.map_rounded, size: 20),
-                    label: const Text('Ouvrir la carte'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      action: AppButton(
+        label: 'Me mettre disponible',
+        variant: AppButtonVariant.success,
+        expand: false,
+        loading: isLoading,
+        onPressed: () => ref
+            .read(availabilityControllerProvider.notifier)
+            .setDisponible(true),
       ),
     );
   }

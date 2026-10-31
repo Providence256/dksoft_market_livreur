@@ -1,13 +1,15 @@
+import 'package:dksoft_market_livreur/core/widgets/app_button.dart';
+import 'package:dksoft_market_livreur/utils/themes/app_palette.dart';
 import 'package:dksoft_market_livreur/core/widgets/app_card.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_icon.dart';
 import 'package:dksoft_market_livreur/features/deliveries/domain/delivery_model.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_sizes.dart';
 import 'package:dksoft_market_livreur/utils/formatters/currency_formatter.dart';
 import 'package:flutter/material.dart';
 
-/// Demande de course : référence, trajet (commerçants puis dealer), gain,
-/// et boutons Accepter / Refuser. Une pastille orange posée sur le bord du
-/// haut indique depuis quand la course attend.
+/// Demande de course : en-tête (référence, ancienneté, gain), trajet
+/// commerçants → dealer, et boutons Refuser / Accepter.
 class DeliveryCard extends StatelessWidget {
   const DeliveryCard({
     super.key,
@@ -41,233 +43,235 @@ class DeliveryCard extends StatelessWidget {
     final pickups = delivery.pickups;
     final shown = pickups.take(2).toList();
     final hidden = pickups.length - shown.length;
-    final stops = pickups.length;
     final hasActions = onAccept != null || onDecline != null;
+    final accent = delivery.urgent ? AppColors.error : AppColors.secondary;
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: Stack(
-        clipBehavior: Clip.none,
+    return AppCard(
+      onTap: onTap,
+      radius: Radii.xl,
+      padding: const EdgeInsets.all(Sizes.p16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppCard(
-            onTap: onTap,
-            padding: const EdgeInsets.fromLTRB(
-              Sizes.p16,
-              Sizes.p24,
-              Sizes.p16,
-              Sizes.p16,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        delivery.shortRef,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontSize: 19,
-                        ),
-                      ),
-                    ),
-                    gapW8,
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardLight,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '$stops arrêt${stops > 1 ? 's' : ''}'
-                        ' · ${delivery.itemsCount} art.',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: AppColors.textSecondaryLight,
-                        ),
-                      ),
-                    ),
-                    gapW8,
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        CurrencyFormatter.formatUsd(delivery.deliveryFee),
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                gapH16,
-                for (final stop in shown)
-                  _RouteLine(
-                    icon: Icons.location_on_outlined,
-                    color: AppColors.secondary,
-                    text: [
-                      stop.place.name,
-                      stop.place.commune,
-                    ].where((e) => e.isNotEmpty).join(', '),
-                  ),
-                if (hidden > 0)
-                  _RouteLine(
-                    icon: Icons.more_horiz_rounded,
-                    color: AppColors.textHintLight,
-                    text:
-                        '+ $hidden autre${hidden > 1 ? 's' : ''} '
-                        'commerçant${hidden > 1 ? 's' : ''}',
-                  ),
-                _RouteLine(
-                  icon: Icons.flag_outlined,
-                  color: AppColors.primary,
-                  text: [
-                    delivery.dropoff.name,
-                    delivery.dropoff.commune,
-                  ].where((e) => e.isNotEmpty).join(', '),
-                  isLast: true,
-                ),
-                if (hasActions) ...[
-                  gapH16,
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: loading ? null : onAccept,
-                            style: ElevatedButton.styleFrom(
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: loading
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.4,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text('Accepter'),
-                          ),
-                        ),
-                      ),
-                      gapW12,
-                      Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: loading ? null : onDecline,
-                            style: ElevatedButton.styleFrom(
-                              elevation: 0,
-                              backgroundColor: AppColors.cardLight,
-                              foregroundColor: AppColors.textPrimaryLight,
-                              disabledBackgroundColor: AppColors.cardLight,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text('Refuser'),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Positioned(
-            top: -14,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 5,
-                ),
+          // ---- En-tête ----
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
-                  color: delivery.urgent
-                      ? AppColors.error
-                      : AppColors.secondary,
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [accent.withValues(alpha: 0.75), accent],
+                  ),
+                  borderRadius: BorderRadius.circular(Radii.md),
+                  boxShadow: AppShadows.glow(accent),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                child: Center(
+                  child: AppIcon(
+                    delivery.urgent ? AppIcons.flash : AppIcons.moto,
+                    size: 24,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              gapW12,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (delivery.urgent) ...[
-                      const Icon(
-                        Icons.bolt_rounded,
-                        size: 15,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 2),
-                    ],
                     Text(
-                      delivery.urgent
-                          ? 'Urgent · ${timeAgo(delivery.createdAt)}'
-                          : timeAgo(delivery.createdAt),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      delivery.urgent ? 'Course urgente' : 'Nouvelle course',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    Row(
+                      children: [
+                        AppIcon(
+                          AppIcons.clock,
+                          size: 13,
+                          color: context.palette.textMuted,
+                        ),
+                        gapW4,
+                        Flexible(
+                          child: Text(
+                            '${timeAgo(delivery.createdAt)} · '
+                            '${delivery.shortRef}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
+              gapW8,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    CurrencyFormatter.formatUsd(delivery.deliveryFee),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    '${delivery.itemsCount} article'
+                    '${delivery.itemsCount > 1 ? 's' : ''}',
+                    style: theme.textTheme.labelMedium,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          gapH16,
+
+          // ---- Trajet ----
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            decoration: BoxDecoration(
+              color: context.palette.surfaceMuted,
+              borderRadius: BorderRadius.circular(Radii.lg),
+            ),
+            child: Column(
+              children: [
+                for (final stop in shown)
+                  _RouteLine(
+                    icon: AppIcons.store,
+                    color: AppColors.secondary,
+                    title: stop.place.name,
+                    subtitle: stop.place.commune,
+                  ),
+                if (hidden > 0)
+                  _RouteLine(
+                    icon: AppIcons.store,
+                    color: context.palette.textMuted,
+                    title:
+                        '+ $hidden autre${hidden > 1 ? 's' : ''} '
+                        'commerçant${hidden > 1 ? 's' : ''}',
+                    subtitle: '',
+                  ),
+                _RouteLine(
+                  icon: AppIcons.flag,
+                  color: context.palette.primary,
+                  title: delivery.dropoff.name,
+                  subtitle: delivery.dropoff.commune,
+                  isLast: true,
+                ),
+              ],
             ),
           ),
+
+          if (hasActions) ...[
+            gapH16,
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: AppButton(
+                    label: 'Refuser',
+                    variant: AppButtonVariant.outlined,
+                    height: 50,
+                    onPressed: loading ? null : onDecline,
+                  ),
+                ),
+                gapW12,
+                Expanded(
+                  flex: 3,
+                  child: AppButton(
+                    label: 'Accepter',
+                    icon: AppIcons.checkCircle,
+                    variant: AppButtonVariant.accent,
+                    height: 50,
+                    loading: loading,
+                    onPressed: onAccept,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
+/// Une étape du trajet : pastille d'icône reliée à la suivante, et le lieu.
 class _RouteLine extends StatelessWidget {
   const _RouteLine({
     required this.icon,
     required this.color,
-    required this.text,
+    required this.title,
+    required this.subtitle,
     this.isLast = false,
   });
 
-  final IconData icon;
+  final AppIconData icon;
   final Color color;
-  final String text;
+  final String title;
+  final String subtitle;
   final bool isLast;
+
+  static const double rowHeight = 46;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : Sizes.p12),
+    final theme = Theme.of(context);
+
+    return SizedBox(
+      height: isLast ? 34 : rowHeight,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 22, color: color),
+          SizedBox(
+            width: 34,
+            child: Column(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: context.palette.surface,
+                    borderRadius: BorderRadius.circular(Radii.sm),
+                  ),
+                  child: Center(child: AppIcon(icon, size: 18, color: color)),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 2),
+                      decoration: BoxDecoration(
+                        color: context.palette.border,
+                        borderRadius: BorderRadius.circular(1),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           gapW12,
           Expanded(
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppColors.textSecondaryLight,
-                fontSize: 14.5,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall,
+                ),
+                if (subtitle.isNotEmpty)
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(height: 1.2),
+                  ),
+              ],
             ),
           ),
         ],

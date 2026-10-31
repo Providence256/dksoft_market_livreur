@@ -1,13 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dksoft_market_livreur/core/domain/livreur_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AuthRepository {
-  AuthRepository(this._auth, this._firestore);
+  AuthRepository(this._auth, this._firestore, this._functions);
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+  final FirebaseFunctions _functions;
 
   static const usersPath = 'users';
   static const livreursPath = 'livreurs';
@@ -122,7 +124,10 @@ class AuthRepository {
   /// La fonction s'exécute de façon asynchrone après la création du
   /// compte, donc juste après l'inscription le claim peut manquer
   /// quelques secondes. [maxAttempts] permet de réessayer en forçant un
-  /// nouveau jeton à chaque fois (même logique que l'app dealer).
+  /// nouveau jeton (même logique que l'app dealer). Le premier essai lit
+  /// le jeton en cache : un compte existant a déjà son claim, inutile
+  /// d'attendre le réseau (ni d'échouer hors connexion) à chaque
+  /// ouverture.
   Future<bool> currentUserIsLivreur({
     int maxAttempts = 6,
     Duration retryDelay = const Duration(seconds: 1),
@@ -131,7 +136,7 @@ class AuthRepository {
     if (user == null) return false;
 
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
-      final tokenResult = await user.getIdTokenResult(true);
+      final tokenResult = await user.getIdTokenResult(attempt > 0);
       if (tokenResult.claims?['role'] == 'livreur') return true;
 
       final isLastAttempt = attempt == maxAttempts - 1;
@@ -140,7 +145,64 @@ class AuthRepository {
     return false;
   }
 
-  Future<void> signOut() => _auth.signOut();
+  /// Déconnecte le motard. Le token de notification est d'abord retiré de
+  /// son profil : ce téléphone ne doit plus recevoir les courses de ce
+  /// compte. Au mieux de ses possibilités (hors connexion, on n'attend pas).
+  Future<void> signOut() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid != null) {
+      try {
+        await _firestore
+            .collection(livreursPath)
+            .doc(uid)
+            .update({'fcmToken': FieldValue.delete()})
+            .timeout(const Duration(seconds: 5));
+      } catch (_) {
+        // Profil absent ou hors connexion : la déconnexion passe avant.
+      }
+    }
+    await _auth.signOut();
+  }
+
+  /// Mot de passe oublié : la demande part à l'administration, qui
+  /// rappelle le motard et lui donne un mot de passe provisoire (le reset
+  /// par e-mail est impossible avec un identifiant construit sur le
+  /// téléphone). Lève un message prêt à afficher en cas d'échec.
+  Future<void> requestPasswordReset(String phone) async {
+    try {
+      await _functions.httpsCallable('requestPasswordReset').call({
+        'phone': phone,
+      });
+    } on FirebaseFunctionsException catch (error) {
+      throw error.message ??
+          "La demande n'a pas pu être envoyée. Vérifiez votre connexion.";
+    }
+  }
+
+  /// Change le mot de passe du motard connecté, après vérification de
+  /// l'actuel (Firebase l'exige pour une opération sensible).
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) {
+      throw 'Reconnectez-vous puis réessayez.';
+    }
+    try {
+      await user.reauthenticateWithCredential(
+        EmailAuthProvider.credential(email: email, password: currentPassword),
+      );
+      await user.updatePassword(newPassword);
+    } on FirebaseAuthException catch (error) {
+      throw switch (error.code) {
+        'wrong-password' ||
+        'invalid-credential' => 'Mot de passe actuel incorrect.',
+        _ => mapAuthError(error),
+      };
+    }
+  }
 
   String mapAuthError(Object error) {
     if (error is FirebaseAuthException) {
@@ -164,7 +226,11 @@ class AuthRepository {
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(FirebaseAuth.instance, FirebaseFirestore.instance);
+  return AuthRepository(
+    FirebaseAuth.instance,
+    FirebaseFirestore.instance,
+    FirebaseFunctions.instance,
+  );
 });
 
 final authStateChangesProvider = StreamProvider<User?>((ref) {

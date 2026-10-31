@@ -1,7 +1,7 @@
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 
-/// Titre de section, avec une action facultative à droite.
+/// Titre de section, avec une action facultative à droite (« Tout voir »).
 class SectionTitle extends StatelessWidget {
   const SectionTitle(this.title, {super.key, this.actionLabel, this.onAction});
 
@@ -13,21 +13,23 @@ class SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Row(
-      children: [
-        Expanded(child: Text(title, style: theme.textTheme.titleMedium)),
-        if (actionLabel != null)
-          GestureDetector(
-            onTap: onAction,
-            child: Text(
-              actionLabel!,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: AppColors.secondaryDark,
-                fontWeight: FontWeight.w600,
+    return SizedBox(
+      height: 36,
+      child: Row(
+        children: [
+          Expanded(child: Text(title, style: theme.textTheme.titleLarge)),
+          if (actionLabel != null)
+            TextButton(
+              onPressed: onAction,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.secondaryDark,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 36),
               ),
+              child: Text(actionLabel!),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

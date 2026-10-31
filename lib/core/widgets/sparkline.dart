@@ -1,37 +1,33 @@
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 
-/// Petite courbe lissée avec un point à son extrémité (cartes de
-/// statistiques de l'accueil).
+/// Petite courbe lissée, avec un dégradé dessous et un point à son
+/// extrémité. Elle se dessine de gauche à droite à l'apparition.
 class Sparkline extends StatelessWidget {
   const Sparkline({
     super.key,
     required this.values,
-    this.lineColor = AppColors.secondary,
-    this.dotColor = AppColors.primary,
+    this.color = AppColors.secondary,
     this.height = 46,
   });
 
   final List<double> values;
-  final Color lineColor;
-  final Color dotColor;
+  final Color color;
   final double height;
 
   @override
   Widget build(BuildContext context) {
-    // La courbe se dessine de gauche à droite à l'apparition.
     return SizedBox(
       height: height,
       width: double.infinity,
       child: TweenAnimationBuilder<double>(
         tween: Tween<double>(begin: 0, end: 1),
-        duration: const Duration(milliseconds: 1500),
+        duration: const Duration(milliseconds: 1400),
         curve: Curves.easeOutCubic,
         builder: (context, progress, _) => CustomPaint(
           painter: _SparklinePainter(
             values: values,
-            lineColor: lineColor,
-            dotColor: dotColor,
+            color: color,
             progress: progress,
           ),
         ),
@@ -43,21 +39,19 @@ class Sparkline extends StatelessWidget {
 class _SparklinePainter extends CustomPainter {
   _SparklinePainter({
     required this.values,
-    required this.lineColor,
-    required this.dotColor,
+    required this.color,
     required this.progress,
   });
 
   final List<double> values;
-  final Color lineColor;
-  final Color dotColor;
+  final Color color;
   final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (values.length < 2) return;
 
-    const pad = 7.0;
+    const pad = 6.0;
     var minValue = values.first;
     var maxValue = values.first;
     for (final v in values) {
@@ -87,27 +81,41 @@ class _SparklinePainter extends CustomPainter {
     }
 
     final metric = path.computeMetrics().first;
-    final drawn = metric.length * progress;
+    final drawn = metric.extractPath(0, metric.length * progress);
+    final end =
+        metric.getTangentForOffset(metric.length * progress)?.position ??
+        points.last;
+
+    // Dégradé sous la partie déjà dessinée.
+    final fill = Path.from(drawn)
+      ..lineTo(end.dx, size.height)
+      ..lineTo(points.first.dx, size.height)
+      ..close();
+    canvas.drawPath(
+      fill,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [color.withValues(alpha: 0.18), color.withValues(alpha: 0)],
+        ).createShader(Offset.zero & size),
+    );
 
     canvas.drawPath(
-      metric.extractPath(0, drawn),
+      drawn,
       Paint()
-        ..color = lineColor
+        ..color = color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.6
+        ..strokeWidth = 2.5
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
 
-    final end = metric.getTangentForOffset(drawn)?.position ?? points.last;
-    canvas.drawCircle(end, 5.5, Paint()..color = Colors.white);
-    canvas.drawCircle(end, 4, Paint()..color = dotColor);
+    canvas.drawCircle(end, 6, Paint()..color = Colors.white);
+    canvas.drawCircle(end, 4, Paint()..color = color);
   }
 
   @override
   bool shouldRepaint(_SparklinePainter old) =>
-      old.values != values ||
-      old.lineColor != lineColor ||
-      old.dotColor != dotColor ||
-      old.progress != progress;
+      old.values != values || old.color != color || old.progress != progress;
 }

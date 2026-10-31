@@ -42,8 +42,10 @@ class LivreurModel {
     this.status = LivreurStatus.pending,
     this.disponible = false,
     this.rating = 0,
+    this.ratingCount = 0,
     this.livraisonsEffectuees = 0,
     this.gains = 0,
+    this.retraitsTotal = 0,
     this.activeDeliveryId,
   });
 
@@ -75,8 +77,19 @@ class LivreurModel {
   final LivreurStatus status;
   final bool disponible;
   final double rating;
+
+  /// Nombre de notes reçues des dealers (la moyenne est [rating]).
+  final int ratingCount;
   final int livraisonsEffectuees;
   final double gains;
+
+  /// Montant déjà retiré ou réservé par une demande de retrait en attente
+  /// (écrit par le backend uniquement).
+  final double retraitsTotal;
+
+  /// Ce que le motard peut encore demander à retirer.
+  double get soldeDisponible =>
+      (gains - retraitsTotal).clamp(0, double.infinity).toDouble();
 
   /// Course en cours (une seule à la fois). Posée à l'acceptation, retirée
   /// à la fin de la livraison.
@@ -138,8 +151,10 @@ class LivreurModel {
       status: LivreurStatusX.fromString(map['status']?.toString()),
       disponible: map['disponible'] as bool? ?? false,
       rating: (map['rating'] as num?)?.toDouble() ?? 0,
+      ratingCount: (map['ratingCount'] as num?)?.toInt() ?? 0,
       livraisonsEffectuees: (map['livraisonsEffectuees'] as num?)?.toInt() ?? 0,
       gains: (map['gains'] as num?)?.toDouble() ?? 0,
+      retraitsTotal: (map['retraitsTotal'] as num?)?.toDouble() ?? 0,
       activeDeliveryId: map['activeDeliveryId']?.toString(),
     );
   }

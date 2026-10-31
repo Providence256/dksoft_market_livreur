@@ -1,5 +1,5 @@
-/// Listes de choix de l'inscription. L'app ne gère que les motos : il n'y a
-/// pas de « type de véhicule » à choisir.
+// Listes de choix de l'inscription. L'app ne gère que les motos : il n'y a
+// pas de « type de véhicule » à choisir.
 
 const kIdCountries = <String>[
   'République démocratique du Congo',

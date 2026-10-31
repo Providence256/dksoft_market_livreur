@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_icon.dart';
 
 /// Pastille ronde d'un arrêt : numéro ou icône sur fond coloré.
 class StopBadge extends StatelessWidget {
@@ -12,7 +13,7 @@ class StopBadge extends StatelessWidget {
 
   final Color color;
   final String? label;
-  final IconData? icon;
+  final AppIconData? icon;
   final double size;
 
   @override
@@ -23,7 +24,7 @@ class StopBadge extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       child: icon != null
-          ? Icon(icon, size: size * 0.55, color: Colors.white)
+          ? AppIcon(icon!, size: size * 0.55, color: Colors.white)
           : Text(
               label!,
               style: TextStyle(

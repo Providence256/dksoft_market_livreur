@@ -2,28 +2,55 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dksoft_market_livreur/features/routing/domain/route_info.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// Calcule l'itinéraire routier entre plusieurs points.
 ///
-/// Service provisoire : le serveur public OSRM (données OpenStreetMap),
-/// gratuit et sans clé, suffisant pour le développement. Pour la
-/// production, on le remplacera par l'API Google Routes appelée depuis une
-/// Cloud Function (clé gardée côté serveur) : seule cette classe change.
+/// D'abord l'API Google Routes, appelée par la Cloud Function
+/// `computeRoute` (la clé reste sur le serveur). Si elle échoue (pas encore
+/// déployée, clé absente, quota…), on retombe sur le serveur public OSRM,
+/// gratuit et sans clé. Les deux répondent au même format (celui d'OSRM).
 class RoutingRepository {
-  static const _host = 'router.project-osrm.org';
+  RoutingRepository(this._functions);
 
-  /// Renvoie null si le calcul échoue (hors connexion, serveur occupé…) :
-  /// l'écran retombe alors sur un trait en pointillés.
+  final FirebaseFunctions _functions;
+
+  static const _osrmHost = 'router.project-osrm.org';
+
+  /// Renvoie null si aucun service ne répond (hors connexion…) : l'écran
+  /// retombe alors sur un trait en pointillés.
   Future<RouteInfo?> route(List<LatLng> waypoints) async {
     if (waypoints.length < 2) return null;
+    return await _fromGoogle(waypoints) ?? await _fromOsrm(waypoints);
+  }
 
+  Future<RouteInfo?> _fromGoogle(List<LatLng> waypoints) async {
+    try {
+      final result = await _functions
+          .httpsCallable(
+            'computeRoute',
+            options: HttpsCallableOptions(timeout: const Duration(seconds: 12)),
+          )
+          .call({
+            'waypoints': [
+              for (final p in waypoints)
+                {'lat': p.latitude, 'lng': p.longitude},
+            ],
+          });
+      return _parse(result.data);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<RouteInfo?> _fromOsrm(List<LatLng> waypoints) async {
     final coordinates = waypoints
         .map((p) => '${p.longitude},${p.latitude}')
         .join(';');
-    final uri = Uri.https(_host, '/route/v1/driving/$coordinates', {
+    final uri = Uri.https(_osrmHost, '/route/v1/driving/$coordinates', {
       'overview': 'full',
       'geometries': 'polyline',
       'steps': 'true',
@@ -39,30 +66,33 @@ class RoutingRepository {
         const Duration(seconds: 12),
       );
       if (response.statusCode != 200) return null;
-
       final body = await response.transform(utf8.decoder).join();
-      final json = jsonDecode(body);
-      if (json is! Map || json['code'] != 'Ok') return null;
-
-      final routes = json['routes'];
-      if (routes is! List || routes.isEmpty) return null;
-      final best = routes.first as Map;
-
-      final legs = (best['legs'] as List? ?? const []).whereType<Map>();
-
-      return RouteInfo(
-        points: decodePolyline(best['geometry'] as String),
-        distanceMeters: (best['distance'] as num).toDouble(),
-        durationSeconds: (best['duration'] as num).toDouble(),
-        legMeters: [for (final l in legs) (l['distance'] as num).toDouble()],
-        legSeconds: [for (final l in legs) (l['duration'] as num).toDouble()],
-        legSteps: [for (final l in legs) _parseSteps(l['steps'])],
-      );
+      return _parse(jsonDecode(body));
     } catch (_) {
       return null;
     } finally {
       client.close(force: true);
     }
+  }
+
+  /// Lit une réponse au format OSRM (`{code: "Ok", routes: [...]}`).
+  static RouteInfo? _parse(Object? json) {
+    if (json is! Map || json['code'] != 'Ok') return null;
+    final routes = json['routes'];
+    if (routes is! List || routes.isEmpty) return null;
+    final best = routes.first as Map;
+    final geometry = best['geometry'];
+    if (geometry is! String || geometry.isEmpty) return null;
+
+    final legs = (best['legs'] as List? ?? const []).whereType<Map>();
+    return RouteInfo(
+      points: decodePolyline(geometry),
+      distanceMeters: (best['distance'] as num).toDouble(),
+      durationSeconds: (best['duration'] as num).toDouble(),
+      legMeters: [for (final l in legs) (l['distance'] as num).toDouble()],
+      legSeconds: [for (final l in legs) (l['duration'] as num).toDouble()],
+      legSteps: [for (final l in legs) _parseSteps(l['steps'])],
+    );
   }
 
   static List<RouteStep> _parseSteps(Object? raw) {
@@ -123,7 +153,7 @@ class RoutingRepository {
 }
 
 final routingRepositoryProvider = Provider<RoutingRepository>((ref) {
-  return RoutingRepository();
+  return RoutingRepository(FirebaseFunctions.instance);
 });
 
 /// Clé stable pour un trajet : le départ (position du motard) est arrondi

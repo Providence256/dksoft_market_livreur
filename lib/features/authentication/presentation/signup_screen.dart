@@ -1,3 +1,8 @@
+import 'package:dksoft_market_livreur/core/animations/motion.dart';
+import 'package:dksoft_market_livreur/core/widgets/toast.dart';
+import 'package:dksoft_market_livreur/utils/themes/app_palette.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_icon.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_button.dart';
 import 'package:dksoft_market_livreur/features/authentication/data/auth_repository.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/auth_controller.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/signup/signup_draft.dart';
@@ -12,7 +17,6 @@ import 'package:dksoft_market_livreur/utils/helpers/phone_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hugeicons/hugeicons.dart';
 
 /// Inscription du motard en 4 étapes : compte, pièce d'identité, moto,
 /// récapitulatif. Rien n'est envoyé avant le dernier bouton.
@@ -27,9 +31,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   static const _lastStep = 3;
 
   static const _titles = [
-    'Créez votre compte livreur',
-    "Informations de la pièce d'identité",
-    'Renseignez votre moto',
+    'Créez votre compte',
+    "Votre pièce d'identité",
+    'Votre moto',
     'Vérifiez vos informations',
   ];
 
@@ -38,7 +42,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     'Saisissez les informations de votre pièce. Vous enverrez sa photo '
         "après l'inscription.",
     'Indiquez les informations de votre moto, personnelle ou louée.',
-    null,
+    "Un dernier coup d'œil avant de créer votre compte.",
   ];
 
   int _step = 0;
@@ -116,14 +120,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     final theme = Theme.of(context);
     final draft = ref.watch(signUpDraftProvider);
     final isLoading = ref.watch(authControllerProvider).isLoading;
-    final subtitle = _subtitles[_step];
 
     ref.listen<AsyncValue<void>>(authControllerProvider, (previous, next) {
       if (!next.hasError) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('${next.error}')));
+      Toast.error(context, next.error!);
 
       // Numéro déjà inscrit : on ramène l'utilisateur à l'étape du téléphone.
       if (next.error == AuthRepository.phoneInUseMessage) {
@@ -139,31 +140,29 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         if (!didPop && !isLoading) setState(() => _step--);
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: context.palette.surface,
         body: SafeArea(
           child: Column(
             children: [
-              // ---- Flèche retour + progression ----
+              // ---- Retour + progression ----
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, Sizes.p24, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  Sizes.p12,
+                  Sizes.p8,
+                  Sizes.p24,
+                  0,
+                ),
                 child: Row(
                   children: [
                     IconButton(
                       tooltip: 'Retour',
                       style: IconButton.styleFrom(
-                        backgroundColor: AppColors.primary.withValues(
-                          alpha: .05,
-                        ),
+                        backgroundColor: context.palette.surfaceMuted,
                       ),
-                      icon: HugeIcon(
-                        icon: HugeIcons.strokeRoundedArrowLeft02,
-                        size: 28,
-                        color: AppColors.primary,
-                      ),
-
+                      icon: const AppIcon(AppIcons.back),
                       onPressed: isLoading ? null : _goBack,
                     ),
-                    const SizedBox(width: 8),
+                    gapW12,
                     Expanded(
                       child: _StepProgress(
                         current: _step,
@@ -179,96 +178,77 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(
                     Sizes.p24,
-                    Sizes.p8,
+                    Sizes.p24,
                     Sizes.p24,
                     Sizes.p24,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Étape ${_step + 1} sur ${_lastStep + 1}',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: AppColors.textSecondaryLight,
-                        ),
+                  child: AnimatedSwitcher(
+                    duration: Motion.medium,
+                    switchInCurve: Motion.emphasized,
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.04, 0),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
                       ),
-                      gapH8,
-                      Text(
-                        _titles[_step],
-                        style: theme.textTheme.headlineMedium,
-                      ),
-                      if (subtitle != null) ...[
-                        gapH8,
+                    ),
+                    child: Column(
+                      key: ValueKey(_step),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          subtitle,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondaryLight,
+                          'ÉTAPE ${_step + 1} SUR ${_lastStep + 1}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.secondaryDark,
                           ),
                         ),
-                      ],
-                      gapH20,
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 220),
-                        child: KeyedSubtree(
-                          key: ValueKey(_step),
-                          child: _buildStep(),
+                        gapH8,
+                        Text(
+                          _titles[_step],
+                          style: theme.textTheme.headlineMedium,
                         ),
-                      ),
-                    ],
+                        gapH8,
+                        Text(
+                          _subtitles[_step],
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: context.palette.textSecondary,
+                          ),
+                        ),
+                        gapH32,
+                        _buildStep(),
+                      ],
+                    ),
                   ),
                 ),
               ),
 
               // ---- Bouton fixé en bas ----
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(
-                  Sizes.p16,
-                  Sizes.p12,
-                  Sizes.p16,
-                  Sizes.p16,
-                ),
+              DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(28),
+                  color: context.palette.surface,
+                  border: Border(
+                    top: BorderSide(color: context.palette.border),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 16,
-                      offset: const Offset(0, -4),
-                    ),
-                  ],
                 ),
-                child: SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: (!isLoading && _canContinue(draft))
-                        ? () => _next(draft)
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: const Color(0xFFF3F3F3),
-                      disabledForegroundColor: AppColors.textHintLight,
-                    ),
-                    child: isLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.4,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            _step == _lastStep
-                                ? 'Créer mon compte'
-                                : 'Continuer',
-                            style: Theme.of(context).textTheme.bodySmall!
-                                .copyWith(color: Colors.white),
-                          ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Sizes.p24,
+                    Sizes.p12,
+                    Sizes.p24,
+                    Sizes.p16,
+                  ),
+                  child: AppButton(
+                    label: _step == _lastStep
+                        ? 'Créer mon compte'
+                        : 'Continuer',
+                    icon: _step == _lastStep
+                        ? AppIcons.check
+                        : AppIcons.forward,
+                    loading: isLoading,
+                    onPressed: _canContinue(draft) ? () => _next(draft) : null,
                   ),
                 ),
               ),
@@ -291,22 +271,24 @@ class _StepProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      spacing: 6,
       children: [
-        for (var i = 0; i < total; i++) ...[
+        for (var i = 0; i < total; i++)
           Expanded(
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              height: 5,
+              duration: Motion.medium,
+              curve: Motion.emphasized,
+              height: 6,
               decoration: BoxDecoration(
-                color: i <= current
-                    ? AppColors.primary
-                    : AppColors.dividerLight,
+                color: i < current
+                    ? context.palette.primary
+                    : i == current
+                    ? AppColors.secondary
+                    : context.palette.surfaceMuted,
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
           ),
-          if (i < total - 1) const SizedBox(width: 6),
-        ],
       ],
     );
   }

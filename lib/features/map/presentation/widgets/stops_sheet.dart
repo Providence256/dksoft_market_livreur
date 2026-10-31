@@ -1,18 +1,21 @@
-import 'package:dksoft_market_livreur/core/widgets/stop_badge.dart';
-import 'package:dksoft_market_livreur/features/deliveries/domain/delivery_model.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_button.dart';
+import 'package:dksoft_market_livreur/utils/themes/app_palette.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_icon.dart';
+import 'package:dksoft_market_livreur/core/widgets/icon_tile.dart';
 import 'package:dksoft_market_livreur/features/map/presentation/map_stop.dart';
+import 'package:dksoft_market_livreur/features/map/presentation/widgets/stop_timeline.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_sizes.dart';
 import 'package:dksoft_market_livreur/utils/helpers/distance_format.dart';
+import 'package:dksoft_market_livreur/utils/helpers/duration_format.dart';
 import 'package:dksoft_market_livreur/utils/helpers/external_launcher.dart';
 import 'package:flutter/material.dart';
-import 'package:dksoft_market_livreur/utils/helpers/duration_format.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// Panneau du bas de l'écran « En route » : l'arrêt en cours (nom, appel,
-/// navigation), distance et articles, le gros bouton d'action, puis — en
-/// faisant glisser — la liste de tous les arrêts.
+/// navigation), distance et durée, le gros bouton d'action, puis — en
+/// faisant glisser — les articles et la liste de tous les arrêts.
 class StopsSheet extends StatelessWidget {
   const StopsSheet({
     super.key,
@@ -27,6 +30,8 @@ class StopsSheet extends StatelessWidget {
     required this.onCollected,
     required this.onUnavailable,
     required this.onComplete,
+    required this.onIncident,
+    this.bottomInset = 0,
   });
 
   final List<MapStop> stops;
@@ -46,6 +51,16 @@ class StopsSheet extends StatelessWidget {
   final void Function(MapStop stop) onUnavailable;
   final VoidCallback onComplete;
 
+  /// Chez le dealer : impossible de remettre le colis (absent, adresse).
+  final VoidCallback onIncident;
+
+  /// Place occupée en bas par la barre de navigation flottante.
+  final double bottomInset;
+
+  /// Rayon (en mètres) à partir duquel le motard est considéré comme
+  /// arrivé : assez large pour absorber l'imprécision du GPS en ville.
+  static const arrivalRadius = 150.0;
+
   /// Distance à vol d'oiseau entre le motard et un arrêt (null si l'une
   /// des deux positions manque).
   double? _distanceTo(MapStop stop) {
@@ -60,17 +75,12 @@ class StopsSheet extends StatelessWidget {
     );
   }
 
-  /// Rayon (en mètres) à partir duquel le motard est considéré comme
-  /// arrivé : assez large pour absorber l'imprécision du GPS en ville.
-  static const arrivalRadius = 150.0;
-
   /// Le motard est-il arrivé à l'arrêt ? Sans position GPS ou sans
   /// coordonnées d'arrêt on ne peut pas le savoir : le bouton reste alors
   /// disponible pour ne pas bloquer la course.
   bool _hasArrived(MapStop stop) {
     final distance = _distanceTo(stop);
-    if (distance == null) return true;
-    return distance <= arrivalRadius;
+    return distance == null || distance <= arrivalRadius;
   }
 
   @override
@@ -84,51 +94,35 @@ class StopsSheet extends StatelessWidget {
       maxChildSize: 0.9,
       snap: true,
       builder: (context, scrollController) {
-        return Container(
+        return DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.14),
-                blurRadius: 24,
-                offset: const Offset(0, -6),
-              ),
-            ],
+            color: context.palette.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.xl)),
+            boxShadow: AppShadows.sheet,
           ),
           child: ListView(
             controller: scrollController,
-            padding: const EdgeInsets.fromLTRB(
-              Sizes.p16,
-              Sizes.p8,
-              Sizes.p16,
-              Sizes.p32,
+            padding: EdgeInsets.fromLTRB(
+              Sizes.screenPadding,
+              Sizes.p12,
+              Sizes.screenPadding,
+              Sizes.p32 + bottomInset,
             ),
             children: [
-              Center(
-                child: Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.dividerLight,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
+              const _DragHandle(),
               gapH16,
-
               if (next != null) ...[
                 _CurrentStop(
                   stop: next,
                   total: stops.length - 1,
                   onNavigate: () => onNavigate(next),
                 ),
-                gapH12,
+                gapH16,
                 Row(
                   children: [
                     Expanded(
                       child: _InfoTile(
-                        icon: Icons.route_rounded,
+                        icon: AppIcons.route,
                         label: 'Distance',
                         value: nextLegMeters != null
                             ? formatDistance(nextLegMeters!)
@@ -140,7 +134,7 @@ class StopsSheet extends StatelessWidget {
                     gapW12,
                     Expanded(
                       child: _InfoTile(
-                        icon: Icons.schedule_rounded,
+                        icon: AppIcons.clock,
                         label: 'Durée',
                         value: nextLegSeconds != null
                             ? formatDuration(nextLegSeconds!)
@@ -150,90 +144,49 @@ class StopsSheet extends StatelessWidget {
                   ],
                 ),
                 gapH16,
-                if (!_hasArrived(next)) ...[
+                if (!_hasArrived(next))
                   _EnRouteHint(
                     stop: next,
                     meters: _distanceTo(next),
                     onNavigate: () => onNavigate(next),
+                  )
+                else ...[
+                  AppButton(
+                    label: next.isDealer
+                        ? 'Marquer comme livré'
+                        : 'Marquer comme récupéré',
+                    icon: next.isDealer ? AppIcons.delivered : AppIcons.package,
+                    variant: next.isDealer
+                        ? AppButtonVariant.success
+                        : AppButtonVariant.primary,
+                    loading: busy,
+                    height: 58,
+                    onPressed: () =>
+                        next.isDealer ? onComplete() : onCollected(next),
                   ),
-                ] else ...[
-                  SizedBox(
-                    height: 56,
-                    child: ElevatedButton(
+                  gapH4,
+                  Center(
+                    child: TextButton.icon(
                       onPressed: busy
                           ? null
-                          : () => next.isDealer
-                                ? onComplete()
-                                : onCollected(next),
-                      style: ElevatedButton.styleFrom(
-                        elevation: 0,
-                        backgroundColor: next.isDealer
-                            ? AppColors.success
-                            : AppColors.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        textStyle: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
-                        ),
+                          : next.isDealer
+                          ? onIncident
+                          : () => onUnavailable(next),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.error,
                       ),
-                      child: busy
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              next.isDealer
-                                  ? 'Marquer comme livré'
-                                  : 'Marquer comme récupéré',
-                            ),
+                      icon: const AppIcon(AppIcons.alert, size: 18),
+                      label: Text(
+                        next.isDealer
+                            ? 'Signaler un problème'
+                            : 'Article indisponible',
+                      ),
                     ),
                   ),
-                  if (!next.isDealer)
-                    Center(
-                      child: TextButton(
-                        onPressed: busy ? null : () => onUnavailable(next),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.error,
-                        ),
-                        child: const Text('Article indisponible'),
-                      ),
-                    ),
                 ],
 
                 // ---- Articles de l'arrêt en cours ----
-                if (next.items.isNotEmpty) ...[
-                  gapH8,
-                  Text(
-                    'À récupérer chez ${next.place.name}',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  gapH8,
-                  for (final item in next.items)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.name,
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ),
-                          Text(
-                            '× ${item.quantity}',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
+                if (next.items.isNotEmpty) ...[gapH16, _ItemsCard(stop: next)],
               ] else
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: Sizes.p16),
@@ -246,10 +199,10 @@ class StopsSheet extends StatelessWidget {
               gapH24,
 
               // ---- Frise des arrêts ----
-              Text('Tous les arrêts', style: theme.textTheme.titleMedium),
+              Text('Itinéraire', style: theme.textTheme.titleMedium),
               gapH12,
               for (final (index, stop) in stops.indexed)
-                _StopTile(
+                StopTimelineTile(
                   stop: stop,
                   isNext: identical(stop, next),
                   isLast: index == stops.length - 1,
@@ -264,7 +217,25 @@ class StopsSheet extends StatelessWidget {
   }
 }
 
-/// L'arrêt en cours : pastille, nom, rôle, et boutons appel / navigation.
+class _DragHandle extends StatelessWidget {
+  const _DragHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 40,
+        height: 4,
+        decoration: BoxDecoration(
+          color: context.palette.border,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+    );
+  }
+}
+
+/// L'arrêt en cours : icône, nom, rôle, et boutons appel / navigation.
 class _CurrentStop extends StatelessWidget {
   const _CurrentStop({
     required this.stop,
@@ -286,18 +257,11 @@ class _CurrentStop extends StatelessWidget {
 
     return Row(
       children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: stop.color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Icon(
-            stop.isDealer ? Icons.flag_rounded : Icons.storefront_rounded,
-            color: stop.color,
-            size: 26,
-          ),
+        IconTile(
+          icon: stop.isDealer ? AppIcons.flag : AppIcons.store,
+          color: stop.color,
+          size: 52,
+          radius: Radii.lg,
         ),
         gapW12,
         Expanded(
@@ -305,41 +269,73 @@ class _CurrentStop extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
+                stop.isDealer
+                    ? 'REMISE AU DEALER'
+                    : 'COMMERÇANT ${stop.order + 1} SUR $total',
+                style: theme.textTheme.labelSmall?.copyWith(color: stop.color),
+              ),
+              Text(
                 stop.place.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleMedium?.copyWith(fontSize: 17),
+                style: theme.textTheme.titleLarge,
               ),
               Text(
                 stop.isDealer
-                    ? 'Dealer · ${stop.place.commune}'
-                    : 'Commerçant ${stop.order + 1} sur $total'
-                          ' · ${stop.itemsCount} article'
+                    ? stop.place.commune
+                    : '${stop.place.commune} · ${stop.itemsCount} article'
                           '${stop.itemsCount > 1 ? 's' : ''}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppColors.textSecondaryLight,
-                ),
+                style: theme.textTheme.bodySmall,
               ),
             ],
           ),
         ),
-        if (hasPhone)
-          IconButton(
+        if (hasPhone) ...[
+          _RoundAction(
+            icon: AppIcons.call,
             tooltip: 'Appeler',
+            color: AppColors.success,
             onPressed: () => callPhone(phone),
-            icon: const Icon(Icons.call_rounded, color: AppColors.primary),
           ),
-        IconButton(
+          gapW8,
+        ],
+        _RoundAction(
+          icon: AppIcons.navigation,
           tooltip: 'Naviguer',
+          color: context.palette.primary,
           onPressed: onNavigate,
-          icon: const Icon(
-            Icons.navigation_rounded,
-            color: AppColors.secondary,
-          ),
         ),
       ],
+    );
+  }
+}
+
+class _RoundAction extends StatelessWidget {
+  const _RoundAction({
+    required this.icon,
+    required this.tooltip,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final AppIconData icon;
+  final String tooltip;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        backgroundColor: color.withValues(alpha: 0.1),
+        foregroundColor: color,
+        fixedSize: const Size.square(46),
+      ),
+      icon: AppIcon(icon, size: 22),
     );
   }
 }
@@ -351,7 +347,7 @@ class _InfoTile extends StatelessWidget {
     required this.value,
   });
 
-  final IconData icon;
+  final AppIconData icon;
   final String label;
   final String value;
 
@@ -362,36 +358,22 @@ class _InfoTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(Sizes.p12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.dividerLight),
+        color: context.palette.surfaceMuted,
+        borderRadius: BorderRadius.circular(Radii.md),
       ),
       child: Row(
         children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 19, color: AppColors.primary),
-          ),
+          AppIcon(icon, size: 20, color: context.palette.textSecondary),
           gapW8,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppColors.textSecondaryLight,
-                  ),
-                ),
+                Text(label, style: theme.textTheme.labelMedium),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: Text(value, style: theme.textTheme.bodyMedium),
+                  child: Text(value, style: theme.textTheme.titleMedium),
                 ),
               ],
             ),
@@ -402,126 +384,56 @@ class _InfoTile extends StatelessWidget {
   }
 }
 
-class _StopTile extends StatelessWidget {
-  const _StopTile({
-    required this.stop,
-    required this.isNext,
-    required this.isLast,
-    required this.distance,
-    required this.onTap,
-  });
+/// Articles à récupérer chez le commerçant en cours.
+class _ItemsCard extends StatelessWidget {
+  const _ItemsCard({required this.stop});
 
   final MapStop stop;
-  final bool isNext;
-  final bool isLast;
-  final double? distance;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hasPosition = stop.position != null;
 
-    final subtitle = stop.isDealer
-        ? 'Remise au dealer · ${stop.place.commune}'
-        : '${stop.place.commune} · ${stop.itemsCount} '
-              'article${stop.itemsCount > 1 ? 's' : ''}';
-
-    final badge = stop.isDealer
-        ? const StopBadge(icon: Icons.flag_rounded, color: AppColors.primary)
-        : switch (stop.status) {
-            PickupStatus.collected => const StopBadge(
-              icon: Icons.check_rounded,
-              color: AppColors.success,
-            ),
-            PickupStatus.unavailable => const StopBadge(
-              icon: Icons.close_rounded,
-              color: AppColors.error,
-            ),
-            _ => StopBadge(
-              label: '${stop.order + 1}',
-              color: AppColors.secondary,
-            ),
-          };
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(
-              width: 30,
-              child: Column(
+    return Container(
+      padding: const EdgeInsets.all(Sizes.p16),
+      decoration: BoxDecoration(
+        color: context.palette.surfaceMuted,
+        borderRadius: BorderRadius.circular(Radii.lg),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'À récupérer chez ${stop.place.name}',
+            style: theme.textTheme.titleSmall,
+          ),
+          gapH8,
+          for (final item in stop.items)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
                 children: [
-                  badge,
-                  if (!isLast)
-                    Expanded(
-                      child: Container(
-                        width: 2,
-                        margin: const EdgeInsets.symmetric(vertical: 3),
-                        color: stop.status == PickupStatus.collected
-                            ? AppColors.success
-                            : AppColors.dividerLight,
-                      ),
+                  Expanded(
+                    child: Text(item.name, style: theme.textTheme.bodyMedium),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
                     ),
+                    decoration: BoxDecoration(
+                      color: context.palette.surface,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '× ${item.quantity}',
+                      style: theme.textTheme.titleSmall,
+                    ),
+                  ),
                 ],
               ),
             ),
-            gapW12,
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: Sizes.p16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            stop.place.name,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: isNext
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        if (distance != null)
-                          Text(
-                            formatDistance(distance!),
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          )
-                        else if (!stop.isPending && !stop.isDealer)
-                          Text(
-                            stop.status?.label ?? '',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: stop.color,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                      ],
-                    ),
-                    Text(
-                      hasPosition
-                          ? subtitle
-                          : '$subtitle · position GPS manquante',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: hasPosition
-                            ? AppColors.textSecondaryLight
-                            : AppColors.warning,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -542,66 +454,28 @@ class _EnRouteHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final target = stop.isDealer ? 'le dealer' : stop.place.name;
+    final distance = meters == null
+        ? 'Rendez-vous chez $target.'
+        : 'Encore ${formatDistance(meters!)} jusqu\'à $target.';
 
-    return Container(
-      padding: const EdgeInsets.all(Sizes.p16),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.near_me_rounded,
-                size: 20,
-                color: AppColors.primary,
-              ),
-              gapW8,
-              Expanded(
-                child: Text(
-                  meters == null
-                      ? 'Rendez-vous chez $target'
-                      : 'Encore ${formatDistance(meters!)} jusqu\'à $target',
-                  style: theme.textTheme.titleSmall,
-                ),
-              ),
-            ],
-          ),
-          gapH4,
-          Text(
-            stop.isDealer
-                ? 'Le bouton « Marquer comme livré » apparaîtra à votre '
-                      'arrivée chez le dealer.'
-                : 'Le bouton « Marquer comme récupéré » apparaîtra à votre '
-                      'arrivée chez le commerçant.',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: AppColors.textSecondaryLight,
-              height: 1.4,
-            ),
-          ),
-          gapH12,
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              onPressed: onNavigate,
-              icon: const Icon(Icons.navigation_rounded, size: 20),
-              label: const Text('Démarrer la navigation'),
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppButton(
+          label: 'Démarrer la navigation',
+          icon: AppIcons.navigation,
+          variant: AppButtonVariant.accent,
+          height: 58,
+          onPressed: onNavigate,
+        ),
+        gapH12,
+        Text(
+          '$distance Le bouton de validation apparaîtra à votre arrivée.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
     );
   }
 }

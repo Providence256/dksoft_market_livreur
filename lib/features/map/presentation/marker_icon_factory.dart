@@ -363,7 +363,7 @@ class MarkerIconFactory {
           style: TextStyle(
             fontSize: 12.5 * pixelRatio,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimaryLight,
+            color: AppColors.textPrimary,
           ),
         ),
       )..layout(maxWidth: 150 * pixelRatio);
@@ -378,7 +378,7 @@ class MarkerIconFactory {
             style: TextStyle(
               fontSize: 11 * pixelRatio,
               fontWeight: FontWeight.w500,
-              color: AppColors.textSecondaryLight,
+              color: AppColors.textSecondary,
             ),
           ),
         )..layout(maxWidth: 150 * pixelRatio);
@@ -459,7 +459,7 @@ class MarkerIconFactory {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = pixelRatio
-          ..color = AppColors.dividerLight,
+          ..color = AppColors.border,
       );
 
       var y = badge + gap + padV;

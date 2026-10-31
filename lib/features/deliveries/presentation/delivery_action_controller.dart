@@ -89,6 +89,29 @@ class DeliveryActionController extends AsyncNotifier<void> {
     }
   }
 
+  /// Incident chez le dealer. Renvoie true si c'est enregistré.
+  Future<bool> reportIncident(
+    String deliveryId,
+    DeliveryStatus incident,
+  ) async {
+    final uid = _uid;
+    if (uid == null) return false;
+
+    state = const AsyncLoading();
+    try {
+      await ref
+          .read(deliveriesRepositoryProvider)
+          .reportIncident(deliveryId: deliveryId, uid: uid, incident: incident);
+      if (!ref.mounted) return true;
+      state = const AsyncData(null);
+      return true;
+    } catch (error, stackTrace) {
+      if (!ref.mounted) return false;
+      state = AsyncError(_messageOf(error), stackTrace);
+      return false;
+    }
+  }
+
   /// Volontairement sans `await` : hors connexion, Firestore mettrait
   /// l'écriture en file d'attente et l'appel ne reviendrait jamais.
   /// La course disparaît de la liste immédiatement (cache local).

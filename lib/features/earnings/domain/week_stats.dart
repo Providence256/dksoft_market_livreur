@@ -38,6 +38,16 @@ class WeekStats {
 
   bool get isEmpty => totalCount == 0;
 
+  /// Gains cumulés du lundi jusqu'au jour de [now] : la courbe monte au fil
+  /// de la semaine.
+  List<double> cumulativeEarnings(DateTime now) {
+    var total = 0.0;
+    return [
+      for (var i = 0; i < now.weekday && i < dailyEarnings.length; i++)
+        total += dailyEarnings[i],
+    ];
+  }
+
   static WeekStats compute(List<DeliveryModel> deliveries, DateTime now) {
     final today = DateTime(now.year, now.month, now.day);
     final start = DateTime(

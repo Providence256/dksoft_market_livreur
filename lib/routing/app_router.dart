@@ -1,9 +1,13 @@
+import 'package:dksoft_market_livreur/features/dashboard/presentation/widgets/dashboard_skeleton.dart';
+import 'package:dksoft_market_livreur/features/map/presentation/widgets/map_skeleton.dart';
 import 'package:dksoft_market_livreur/features/authentication/data/auth_repository.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/login_screen.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/signup_screen.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/role_guard.dart';
 import 'package:dksoft_market_livreur/features/deliveries/presentation/delivery_detail_screen.dart';
 import 'package:dksoft_market_livreur/features/map/presentation/delivery_map_screen.dart';
+import 'package:dksoft_market_livreur/features/reviews/presentation/reviews_screen.dart';
+import 'package:dksoft_market_livreur/features/settings/presentation/settings_screen.dart';
 import 'package:dksoft_market_livreur/features/shell/presentation/main_shell.dart';
 import 'package:dksoft_market_livreur/routing/go_router_refresh_stream.dart';
 import 'package:dksoft_market_livreur/core/animations/motion.dart';
@@ -11,7 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-enum AppRoute { home, login, signup, delivery, deliveryMap }
+enum AppRoute { home, login, signup, delivery, deliveryMap, reviews, settings }
 
 const _publicPaths = ['/login', '/signup'];
 
@@ -93,8 +97,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home',
         name: AppRoute.home.name,
-        pageBuilder: (context, state) =>
-            _page(state, const RoleGuard(child: MainShell())),
+        pageBuilder: (context, state) => _page(
+          state,
+          const RoleGuard(
+            skeleton: SafeArea(bottom: false, child: DashboardSkeleton()),
+            child: MainShell(),
+          ),
+        ),
       ),
       GoRoute(
         path: '/delivery/:id',
@@ -102,6 +111,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => _page(
           state,
           RoleGuard(
+            skeleton: const MapSkeleton(),
             child: DeliveryDetailScreen(
               deliveryId: state.pathParameters['id']!,
             ),
@@ -115,10 +125,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => _page(
           state,
           RoleGuard(
+            skeleton: const MapSkeleton(),
             child: DeliveryMapScreen(deliveryId: state.pathParameters['id']!),
           ),
           sheet: true,
         ),
+      ),
+      GoRoute(
+        path: '/reviews',
+        name: AppRoute.reviews.name,
+        pageBuilder: (context, state) =>
+            _page(state, const RoleGuard(child: ReviewsScreen())),
+      ),
+      GoRoute(
+        path: '/settings',
+        name: AppRoute.settings.name,
+        pageBuilder: (context, state) => _page(state, const SettingsScreen()),
       ),
       GoRoute(
         path: '/login',

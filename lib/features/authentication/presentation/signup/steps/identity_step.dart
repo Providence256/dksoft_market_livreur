@@ -1,10 +1,12 @@
+import 'package:dksoft_market_livreur/core/widgets/app_fields.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_icon.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/signup/signup_draft.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/signup/signup_options.dart';
-import 'package:dksoft_market_livreur/features/authentication/presentation/signup/widgets/step_select_row.dart';
-import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/auth_text_field.dart';
+import 'package:dksoft_market_livreur/utils/constants/app_sizes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// Étape 2 : pièce d'identité (pays, type, nom, numéro, date).
 class IdentityStep extends ConsumerStatefulWidget {
   const IdentityStep({super.key});
 
@@ -78,8 +80,8 @@ class _IdentityStepState extends ConsumerState<IdentityStep> {
 
   String _numberLabel(String? idType) {
     return switch (idType) {
-      'Permis de conduire' => 'Numéro du permis de conduire',
-      "Carte d'électeur" => "Numéro de la carte d'électeur",
+      'Permis de conduire' => 'Numéro du permis',
+      "Carte d'électeur" => 'Numéro de la carte',
       'Passeport' => 'Numéro du passeport',
       _ => 'Numéro de la pièce',
     };
@@ -91,52 +93,62 @@ class _IdentityStepState extends ConsumerState<IdentityStep> {
     final issueDate = draft.idIssueDate;
 
     return Column(
-      spacing: 14,
+      spacing: Sizes.p20,
       children: [
-        StepSelectRow(
+        AppSelectField(
           label: 'Pays de délivrance',
           value: draft.idCountry,
           onTap: _pickCountry,
         ),
-
-        StepSelectRow(
+        AppSelectField(
           label: 'Type de pièce',
           value: draft.idType,
+          placeholder: "Carte d'électeur, permis…",
           onTap: _pickType,
         ),
-        AuthTextField(
-          label: 'NOM',
-          controller: _lastName,
-          prefix: Icon(Icons.person_outline, color: Colors.grey[500]),
-          hintText: 'Musaghi',
-          textCapitalization: TextCapitalization.words,
-          onchanged: (value) =>
-              _notifier.update((d) => d.copyWith(lastName: value)),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: AppTextField(
+                label: 'Nom',
+                controller: _lastName,
+                hintText: 'Musaghi',
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.words,
+                onChanged: (value) =>
+                    _notifier.update((d) => d.copyWith(lastName: value)),
+              ),
+            ),
+            gapW12,
+            Expanded(
+              child: AppTextField(
+                label: 'Prénom',
+                controller: _firstName,
+                hintText: 'Providence',
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.words,
+                onChanged: (value) =>
+                    _notifier.update((d) => d.copyWith(firstName: value)),
+              ),
+            ),
+          ],
         ),
-        AuthTextField(
-          label: 'PRÉNOM',
-          controller: _firstName,
-          prefix: Icon(Icons.person_outline, color: Colors.grey[500]),
-          hintText: 'Providence',
-          textCapitalization: TextCapitalization.words,
-          onchanged: (value) =>
-              _notifier.update((d) => d.copyWith(firstName: value)),
-        ),
-        AuthTextField(
+        AppTextField(
           label: _numberLabel(draft.idType),
           controller: _idNumber,
-          prefix: Icon(Icons.person_outline, color: Colors.grey[500]),
-          hintText: 'Ex: FF056HGJ',
-          textCapitalization: TextCapitalization.words,
-          onchanged: (value) =>
+          prefixIcon: AppIcons.idCard,
+          hintText: 'Ex : FF056HGJ',
+          textCapitalization: TextCapitalization.characters,
+          onChanged: (value) =>
               _notifier.update((d) => d.copyWith(idNumber: value)),
         ),
-
-        StepSelectRow(
+        AppSelectField(
           label: 'Date de délivrance',
           value: issueDate == null ? null : formatIssueDate(issueDate),
+          placeholder: 'Choisir une date',
+          trailingIcon: AppIcons.calendar,
           onTap: _pickIssueDate,
-          trailing: const Icon(Icons.calendar_today_outlined, size: 22),
         ),
       ],
     );

@@ -24,28 +24,28 @@ class DeliveriesRepository {
   DocumentReference<Map<String, dynamic>> _deliveryDoc(String id) =>
       _firestore.collection(deliveriesPath).doc(id);
 
-  /// Courses que ce motard peut prendre, en temps réel, sans celles qu'il
-  /// a déjà refusées.
+  /// Nombre maximum de courses ouvertes chargées : les plus récentes. Évite
+  /// de télécharger toutes les courses de Kinshasa sur chaque téléphone.
+  static const availableLimit = 30;
+
+  /// Courses que ce motard peut prendre, en temps réel, les plus récentes
+  /// d'abord, sans celles qu'il a déjà refusées.
   ///
-  /// Le tri se fait côté app (les plus récentes d'abord) pour éviter un
-  /// index composite Firestore à créer à la main.
+  /// Nécessite l'index composite (status, createdAt desc) déclaré dans
+  /// `firestore.indexes.json` du backend.
   Stream<List<DeliveryModel>> watchAvailableDeliveries(String uid) {
     return _firestore
         .collection(deliveriesPath)
         .where('status', isEqualTo: DeliveryStatus.pendingAssignment.name)
+        .orderBy('createdAt', descending: true)
+        .limit(availableLimit)
         .snapshots()
-        .map((snapshot) {
-          final deliveries = snapshot.docs
+        .map(
+          (snapshot) => snapshot.docs
               .map(DeliveryModel.fromSnapshot)
               .where((delivery) => !delivery.refusedBy.contains(uid))
-              .toList();
-
-          final now = DateTime.now();
-          deliveries.sort(
-            (a, b) => (b.createdAt ?? now).compareTo(a.createdAt ?? now),
-          );
-          return deliveries;
-        });
+              .toList(),
+        );
   }
 
   /// Toutes les courses de ce motard (en cours et terminées), en temps
@@ -200,6 +200,44 @@ class DeliveriesRepository {
         'status': DeliveryStatus.delivered.name,
         'deliveredAt': FieldValue.serverTimestamp(),
       });
+      transaction.update(livreurRef, {'activeDeliveryId': null});
+    }, timeout: const Duration(seconds: 10));
+  }
+
+  /// Impossible de remettre le colis chez le dealer (absent, mauvaise
+  /// adresse) : la course se termine sur cet incident, l'administration
+  /// prend le relais, et le motard redevient libre. Aucun gain n'est
+  /// crédité tant que l'administration n'a pas tranché.
+  Future<void> reportIncident({
+    required String deliveryId,
+    required String uid,
+    required DeliveryStatus incident,
+  }) {
+    assert(
+      incident == DeliveryStatus.dealerAbsent ||
+          incident == DeliveryStatus.wrongAddress,
+    );
+    final ref = _deliveryDoc(deliveryId);
+    final livreurRef = _firestore
+        .collection(AuthRepository.livreursPath)
+        .doc(uid);
+
+    return _firestore.runTransaction((transaction) async {
+      final snap = await transaction.get(ref);
+      if (!snap.exists) {
+        throw const DeliveryException("Cette course n'existe plus.");
+      }
+      final delivery = DeliveryModel.fromSnapshot(snap);
+      if (delivery.livreurId != uid) {
+        throw const DeliveryException("Cette course ne vous est pas affectée.");
+      }
+      if (delivery.status != DeliveryStatus.enRoute) {
+        throw const DeliveryException(
+          'Un incident se déclare une fois arrivé chez le dealer.',
+        );
+      }
+
+      transaction.update(ref, {'status': incident.name});
       transaction.update(livreurRef, {'activeDeliveryId': null});
     }, timeout: const Duration(seconds: 10));
   }

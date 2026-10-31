@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.dksoftMarketLivreur</string>
+	<string>com.providence.dksoftMarketLivreur</string>
 	<key>PROJECT_ID</key>
 	<string>dksoft-market</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:894362509654:ios:f78547350f944453da36f7</string>
+	<string>1:894362509654:ios:9bb9ac641ad67251da36f7</string>
 </dict>
 </plist>

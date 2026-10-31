@@ -58,6 +58,27 @@ class LivreurRepository {
     }, timeout: const Duration(seconds: 10));
   }
 
+  /// Nouvelle moto (ou correction) : datée pour que l'administration
+  /// puisse revoir le changement.
+  Future<void> updateMoto({
+    required String uid,
+    required String make,
+    required String model,
+    required String color,
+    required int year,
+    String? plaque,
+  }) {
+    return _doc(uid).update({
+      'motoMake': make,
+      'motoModel': model,
+      'motoColor': color,
+      'motoYear': year,
+      'motoType': '$make $model',
+      'plaque': plaque,
+      'motoUpdatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Future<Uint8List?> readIdentityPhoto(String path) {
     return _storage.ref(path).getData(5 * 1024 * 1024);
   }

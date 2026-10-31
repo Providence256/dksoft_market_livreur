@@ -1,15 +1,21 @@
 import 'package:dksoft_market_livreur/core/animations/motion.dart';
+import 'package:dksoft_market_livreur/core/widgets/toast.dart';
+import 'package:dksoft_market_livreur/utils/themes/app_palette.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_button.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_fields.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_icon.dart';
+import 'package:dksoft_market_livreur/core/widgets/hero_card.dart';
 import 'package:dksoft_market_livreur/features/authentication/presentation/auth_controller.dart';
-import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/auth_text_field.dart';
-import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/phone_prefix.dart';
+import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/brand_mark.dart';
+import 'package:dksoft_market_livreur/features/authentication/presentation/widgets/forgot_password_sheet.dart';
 import 'package:dksoft_market_livreur/routing/app_router.dart';
-import 'package:dksoft_market_livreur/utils/helpers/phone_format.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
-import 'package:flutter/gestures.dart';
+import 'package:dksoft_market_livreur/utils/constants/app_sizes.dart';
+import 'package:dksoft_market_livreur/utils/helpers/phone_format.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hugeicons/hugeicons.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -51,235 +57,228 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(authControllerProvider).isLoading;
     final theme = Theme.of(context);
+    final isLoading = ref.watch(authControllerProvider).isLoading;
+    final topInset = MediaQuery.paddingOf(context).top;
 
     ref.listen<AsyncValue<void>>(authControllerProvider, (previous, next) {
       if (next.hasError) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('${next.error}')));
+        Toast.error(context, next.error!);
       }
     });
 
-    return Scaffold(
-      backgroundColor: AppColors.primary,
-      resizeToAvoidBottomInset: false,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 3,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    FadeSlideIn(
-                      child: Container(
-                        width: 54,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: AppColors.secondary.withValues(alpha: .7),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: const Icon(
-                          Icons.two_wheeler_rounded,
-                          color: Colors.white,
-                          size: 30,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    FadeSlideIn(
-                      delay: const Duration(milliseconds: 120),
-                      child: Text(
-                        'Dksoft\nLivreur',
-                        style: theme.textTheme.headlineLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          height: 1.15,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    FadeSlideIn(
-                      delay: const Duration(milliseconds: 240),
-                      child: Text(
-                        'Livrez à Kinshasa, soyez payé après chaque course.',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 8,
-              child: FadeSlideIn(
-                offset: const Offset(0, 0.22),
-                delay: const Duration(milliseconds: 200),
-                duration: const Duration(milliseconds: 900),
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(28),
-                    ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: context.palette.surface,
+        body: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ---- Bandeau marine ----
+              HeroBackground(
+                shadow: false,
+                borderRadius: BorderRadius.zero,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    Sizes.p24,
+                    topInset + Sizes.p24,
+                    Sizes.p24,
+                    Sizes.p48 + Sizes.p16,
                   ),
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(
-                      24,
-                      12,
-                      24,
-                      MediaQuery.viewInsetsOf(context).bottom + 24,
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              margin: const EdgeInsets.only(bottom: 20),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade300,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: staggerIn([
+                      const BrandMark(onDark: true),
+                      gapH32,
+                      const Text(
+                        'Livrez à Kinshasa,\npayé à chaque course.',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      gapH12,
+                      Wrap(
+                        spacing: Sizes.p8,
+                        runSpacing: Sizes.p8,
+                        children: const [
+                          _Perk(
+                            icon: AppIcons.flash,
+                            label: 'Courses en direct',
                           ),
-                          Text(
-                            'Se connecter',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Votre numéro de téléphone',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          AuthTextField(
-                            label: 'TÉLÉPHONE',
-                            controller: _phoneController,
-                            keyboardType: TextInputType.phone,
-                            focused: true,
-                            hintText: '995 415 641',
-                            autofillHints: const [
-                              AutofillHints.telephoneNumber,
-                            ],
-                            prefix: const PhonePrefix(),
-                            validator: (value) {
-                              final digits = (value ?? '').replaceAll(
-                                RegExp(r'[^0-9]'),
-                                '',
-                              );
-                              return digits.length < 9
-                                  ? 'Numéro de téléphone invalide'
-                                  : null;
-                            },
-                          ),
-                          const SizedBox(height: 14),
-                          AuthTextField(
-                            label: 'MOT DE PASSE',
-                            controller: _passwordController,
-                            obscureText: _obscurePassword,
-                            prefix: Icon(
-                              Icons.lock_outline_rounded,
-                              color: Colors.grey[500],
-                            ),
-                            suffix: IconButton(
-                              onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
-                              icon: HugeIcon(
-                                color: AppColors.primary,
-                                icon: _obscurePassword
-                                    ? HugeIcons.strokeRoundedViewOffSlash
-                                    : HugeIcons.strokeRoundedView,
-                              ),
-                            ),
-                            validator: (value) => (value ?? '').length < 6
-                                ? 'Au moins 6 caractères'
-                                : null,
-                          ),
-                          const SizedBox(height: 24),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: isLoading ? null : _submit,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                              ),
-                              child: isLoading
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.4,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      'Se connecter',
-                                      style: theme.textTheme.bodyLarge!
-                                          .copyWith(
-                                            color: Colors.white,
-                                            fontSize: 15,
-                                          ),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Center(
-                            child: RichText(
-                              text: TextSpan(
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
-                                children: [
-                                  const TextSpan(
-                                    text: 'Pas encore de compte ? ',
-                                  ),
-                                  TextSpan(
-                                    text: 'Devenir livreur',
-                                    style: const TextStyle(
-                                      color: AppColors.secondary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                    recognizer: TapGestureRecognizer()
-                                      ..onTap = () => context.pushNamed(
-                                        AppRoute.signup.name,
-                                      ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                          _Perk(icon: AppIcons.coins, label: 'Gains suivis'),
+                          _Perk(icon: AppIcons.route, label: 'GPS intégré'),
                         ],
                       ),
+                    ], step: 60),
+                  ),
+                ),
+              ),
+
+              // ---- Formulaire, qui chevauche le bandeau ----
+              Transform.translate(
+                offset: const Offset(0, -Sizes.p32),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(
+                    Sizes.p24,
+                    Sizes.p32,
+                    Sizes.p24,
+                    Sizes.p24,
+                  ),
+                  decoration: BoxDecoration(
+                    color: context.palette.surface,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(Radii.xl),
+                    ),
+                  ),
+                  child: AutofillGroup(
+                    child: Form(
+                      key: _formKey,
+                      child: FadeSlideIn(
+                        delay: const Duration(milliseconds: 150),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Connexion',
+                              style: theme.textTheme.headlineMedium,
+                            ),
+                            gapH4,
+                            Text(
+                              'Entrez votre numéro et votre mot de passe.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: context.palette.textSecondary,
+                              ),
+                            ),
+                            gapH24,
+                            AppTextField(
+                              label: 'Téléphone',
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
+                              textInputAction: TextInputAction.next,
+                              hintText: '995 415 641',
+                              autofillHints: const [
+                                AutofillHints.telephoneNumber,
+                              ],
+                              prefix: const PhonePrefix(),
+                              validator: (value) {
+                                final digits = (value ?? '').replaceAll(
+                                  RegExp(r'[^0-9]'),
+                                  '',
+                                );
+                                return digits.length < 9
+                                    ? 'Numéro de téléphone invalide'
+                                    : null;
+                              },
+                            ),
+                            gapH16,
+                            AppTextField(
+                              label: 'Mot de passe',
+                              controller: _passwordController,
+                              obscureText: _obscurePassword,
+                              textInputAction: TextInputAction.done,
+                              autofillHints: const [AutofillHints.password],
+                              prefixIcon: AppIcons.lock,
+                              suffix: IconButton(
+                                tooltip: _obscurePassword
+                                    ? 'Afficher'
+                                    : 'Masquer',
+                                onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
+                                icon: AppIcon(
+                                  _obscurePassword
+                                      ? AppIcons.eye
+                                      : AppIcons.eyeOff,
+                                  size: 20,
+                                ),
+                              ),
+                              validator: (value) => (value ?? '').length < 6
+                                  ? 'Au moins 6 caractères'
+                                  : null,
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: isLoading
+                                    ? null
+                                    : () => showForgotPasswordSheet(
+                                        context,
+                                        phone: _phoneController.text,
+                                      ),
+                                child: const Text('Mot de passe oublié ?'),
+                              ),
+                            ),
+                            gapH12,
+                            AppButton(
+                              label: 'Se connecter',
+                              icon: AppIcons.forward,
+                              loading: isLoading,
+                              onPressed: _submit,
+                            ),
+                            gapH24,
+                            Row(
+                              children: [
+                                const Expanded(child: Divider()),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: Sizes.p12,
+                                  ),
+                                  child: Text(
+                                    'Nouveau ?',
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                ),
+                                const Expanded(child: Divider()),
+                              ],
+                            ),
+                            gapH16,
+                            AppButton(
+                              label: 'Devenir livreur Dksoft',
+                              icon: AppIcons.moto,
+                              variant: AppButtonVariant.outlined,
+                              onPressed: isLoading
+                                  ? null
+                                  : () =>
+                                        context.pushNamed(AppRoute.signup.name),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Halos de couleur flous derrière le titre.
+/// Atout de l'app, en pastille sur le bandeau.
+class _Perk extends StatelessWidget {
+  const _Perk({required this.icon, required this.label});
+
+  final AppIconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return HeroChip(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppIcon(icon, color: AppColors.secondaryLight),
+          gapW4,
+          Text(label),
+        ],
+      ),
+    );
+  }
+}

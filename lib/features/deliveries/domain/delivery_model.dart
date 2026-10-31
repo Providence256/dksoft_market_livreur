@@ -93,7 +93,13 @@ class DeliveryPlace {
   final double? latitude;
   final double? longitude;
 
-  bool get hasCoordinates => latitude != null && longitude != null;
+  /// (0, 0) est la valeur par défaut d'un pin jamais posé : ce n'est pas
+  /// une vraie position (elle tomberait dans le golfe de Guinée et
+  /// ferait cadrer la carte sur la moitié de l'Afrique).
+  bool get hasCoordinates =>
+      latitude != null &&
+      longitude != null &&
+      !(latitude == 0 && longitude == 0);
 
   Map<String, dynamic> toMap() => <String, dynamic>{
     'name': name,

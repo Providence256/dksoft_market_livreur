@@ -3,7 +3,15 @@
 class DateFormatterFr {
   DateFormatterFr._();
 
-  static const _weekdays = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.'];
+  static const _weekdays = [
+    'Lun.',
+    'Mar.',
+    'Mer.',
+    'Jeu.',
+    'Ven.',
+    'Sam.',
+    'Dim.',
+  ];
 
   static const _months = [
     'janvier',

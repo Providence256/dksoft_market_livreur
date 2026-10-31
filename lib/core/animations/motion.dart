@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:dksoft_market_livreur/core/widgets/app_icon.dart';
+import 'package:dksoft_market_livreur/utils/themes/app_palette.dart';
 import 'dart:math' as math;
 
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
@@ -298,14 +300,14 @@ class _RadarPulseState extends State<RadarPulse>
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.4),
+                        color: context.palette.primary.withValues(alpha: 0.4),
                         blurRadius: 22,
                         offset: Offset(0, 10 - float),
                       ),
                     ],
                   ),
-                  child: Icon(
-                    Icons.two_wheeler_rounded,
+                  child: AppIcon(
+                    AppIcons.moto,
                     color: Colors.white,
                     size: size * 0.18,
                   ),
@@ -393,7 +395,7 @@ class RadarEmptyState extends StatelessWidget {
                 message,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.labelLarge?.copyWith(
-                  color: AppColors.textSecondaryLight,
+                  color: context.palette.textSecondary,
                   fontWeight: FontWeight.w400,
                   height: 1.45,
                 ),

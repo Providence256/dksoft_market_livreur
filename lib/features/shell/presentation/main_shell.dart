@@ -1,7 +1,11 @@
+import 'package:dksoft_market_livreur/core/widgets/app_nav_bar.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_icon.dart';
+import 'package:dksoft_market_livreur/features/authentication/data/auth_repository.dart';
 import 'package:dksoft_market_livreur/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:dksoft_market_livreur/features/deliveries/data/deliveries_repository.dart';
 import 'package:dksoft_market_livreur/features/deliveries/presentation/available_deliveries_screen.dart';
 import 'package:dksoft_market_livreur/features/earnings/presentation/earnings_screen.dart';
+import 'package:dksoft_market_livreur/features/map/data/live_tracking.dart';
 import 'package:dksoft_market_livreur/features/map/presentation/overview_map_screen.dart';
 import 'package:dksoft_market_livreur/features/profile/presentation/profile_screen.dart';
 import 'package:flutter/material.dart';
@@ -10,8 +14,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Onglet actif de la navigation principale. Les écrans (l'accueil par
 /// exemple) peuvent le changer pour envoyer le motard sur la carte.
 class ShellIndex extends Notifier<int> {
+  /// Repart de l'accueil à chaque changement de compte (sinon on se
+  /// reconnecte sur l'onglet Profil, d'où l'on s'est déconnecté).
   @override
-  int build() => 0;
+  int build() {
+    ref.watch(authStateChangesProvider.select((user) => user.value?.uid));
+    return kTabHome;
+  }
 
   void select(int index) => state = index;
 }
@@ -22,7 +31,10 @@ final shellIndexProvider = NotifierProvider<ShellIndex, int>(ShellIndex.new);
 /// de l'application est alors masquée.
 class FullScreenMap extends Notifier<bool> {
   @override
-  bool build() => false;
+  bool build() {
+    ref.watch(authStateChangesProvider.select((user) => user.value?.uid));
+    return false;
+  }
 
   void set(bool value) => state = value;
 }
@@ -37,7 +49,8 @@ const kTabDeliveries = 2;
 const kTabEarnings = 3;
 const kTabProfile = 4;
 
-/// Navigation principale du motard : Accueil, Carte, Courses.
+/// Navigation principale du motard : Accueil, Carte, Demandes, Gains,
+/// Profil.
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
 
@@ -52,6 +65,9 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Partage la position pendant une course (inactif sinon).
+    ref.watch(liveTrackingProvider);
+
     final index = ref.watch(shellIndexProvider);
     final fullScreen = ref.watch(fullScreenMapProvider) && index == kTabMap;
     if (index == kTabMap) _mapVisited = true;
@@ -60,13 +76,9 @@ class _MainShellState extends ConsumerState<MainShell> {
     final availableCount =
         ref.watch(availableDeliveriesProvider).value?.length ?? 0;
 
-    Widget badge(IconData icon) => Badge.count(
-      count: availableCount,
-      isLabelVisible: availableCount > 0,
-      child: Icon(icon),
-    );
-
     return Scaffold(
+      // La barre flotte au-dessus du contenu.
+      extendBody: true,
       body: IndexedStack(
         index: index,
         children: [
@@ -79,37 +91,19 @@ class _MainShellState extends ConsumerState<MainShell> {
       ),
       bottomNavigationBar: fullScreen
           ? null
-          : NavigationBar(
-              selectedIndex: index,
-              onDestinationSelected: ref
-                  .read(shellIndexProvider.notifier)
-                  .select,
-              destinations: [
-                const NavigationDestination(
-                  icon: Icon(Icons.space_dashboard_outlined),
-                  selectedIcon: Icon(Icons.space_dashboard_rounded),
-                  label: 'Accueil',
-                ),
-                const NavigationDestination(
-                  icon: Icon(Icons.map_outlined),
-                  selectedIcon: Icon(Icons.map_rounded),
-                  label: 'Carte',
-                ),
-                NavigationDestination(
-                  icon: badge(Icons.two_wheeler_outlined),
-                  selectedIcon: badge(Icons.two_wheeler_rounded),
+          : AppNavBar(
+              index: index,
+              onSelected: ref.read(shellIndexProvider.notifier).select,
+              items: [
+                const AppNavItem(icon: AppIcons.home, label: 'Accueil'),
+                const AppNavItem(icon: AppIcons.map, label: 'Carte'),
+                AppNavItem(
+                  icon: AppIcons.requests,
                   label: 'Demandes',
+                  badge: availableCount,
                 ),
-                const NavigationDestination(
-                  icon: Icon(Icons.account_balance_wallet_outlined),
-                  selectedIcon: Icon(Icons.account_balance_wallet_rounded),
-                  label: 'Gains',
-                ),
-                const NavigationDestination(
-                  icon: Icon(Icons.person_outline_rounded),
-                  selectedIcon: Icon(Icons.person_rounded),
-                  label: 'Profil',
-                ),
+                const AppNavItem(icon: AppIcons.wallet, label: 'Gains'),
+                const AppNavItem(icon: AppIcons.profile, label: 'Profil'),
               ],
             ),
     );

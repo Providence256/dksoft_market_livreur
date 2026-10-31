@@ -23,4 +23,12 @@ class CurrencyFormatter {
     );
     return '$wholePart,${parts[1]} USD';
   }
+
+  /// Montant court pour les bulles et les cartes : « 230 USD », « 12,5 USD ».
+  static String shortUsd(num value) {
+    final text = value == value.roundToDouble()
+        ? value.toStringAsFixed(0)
+        : value.toStringAsFixed(1).replaceAll('.', ',');
+    return '$text USD';
+  }
 }

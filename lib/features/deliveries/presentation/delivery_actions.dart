@@ -1,3 +1,6 @@
+import 'package:dksoft_market_livreur/core/widgets/confirm_dialog.dart';
+import 'package:dksoft_market_livreur/core/widgets/toast.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_icon.dart';
 import 'package:dksoft_market_livreur/features/deliveries/presentation/delivery_action_controller.dart';
 import 'package:dksoft_market_livreur/features/shell/presentation/main_shell.dart';
 import 'package:flutter/material.dart';
@@ -19,15 +22,11 @@ Future<bool> acceptAndOpenMap(
   if (!context.mounted) return success;
 
   if (success) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Course acceptée !')));
+    Toast.success(context, 'Course acceptée !');
     ref.read(shellIndexProvider.notifier).select(kTabMap);
   } else {
     final error = ref.read(deliveryActionControllerProvider).error;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(error?.toString() ?? 'Course non acceptée.')),
-    );
+    Toast.error(context, error?.toString() ?? 'Course non acceptée.');
   }
   return success;
 }
@@ -39,31 +38,19 @@ Future<bool> confirmDecline(
   WidgetRef ref,
   String deliveryId,
 ) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text('Refuser cette course ?'),
-      content: const Text(
-        'Elle ne vous sera plus proposée, mais restera disponible pour '
-        'les autres motards.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Annuler'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Refuser'),
-        ),
-      ],
-    ),
+  final confirmed = await showConfirmDialog(
+    context,
+    title: 'Refuser cette course ?',
+    message:
+        'Elle ne vous sera plus proposée, mais restera disponible pour les '
+        'autres motards.',
+    confirmLabel: 'Refuser',
+    icon: AppIcons.decline,
+    destructive: true,
   );
 
-  if (confirmed == true) {
+  if (confirmed) {
     ref.read(deliveryActionControllerProvider.notifier).refuse(deliveryId);
-    return true;
   }
-  return false;
+  return confirmed;
 }

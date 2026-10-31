@@ -1,9 +1,17 @@
+import 'package:dksoft_market_livreur/core/widgets/skeleton.dart';
+import 'package:dksoft_market_livreur/core/animations/motion.dart';
+import 'package:dksoft_market_livreur/core/widgets/toast.dart';
+import 'package:dksoft_market_livreur/utils/themes/app_palette.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_icon.dart';
 import 'package:dksoft_market_livreur/core/data/livreur_repository.dart';
 import 'package:dksoft_market_livreur/core/domain/livreur_model.dart';
-import 'package:dksoft_market_livreur/features/authentication/data/auth_repository.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_button.dart';
+import 'package:dksoft_market_livreur/core/widgets/app_card.dart';
+import 'package:dksoft_market_livreur/core/widgets/icon_tile.dart';
 import 'package:dksoft_market_livreur/features/validation/presentation/identity_upload_controller.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_colors.dart';
 import 'package:dksoft_market_livreur/utils/constants/app_sizes.dart';
+import 'package:dksoft_market_livreur/features/authentication/presentation/sign_out_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -19,22 +27,37 @@ class PendingValidationScreen extends ConsumerWidget {
   Future<void> _choosePhotoSource(BuildContext context, WidgetRef ref) async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
-      showDragHandle: true,
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Prendre une photo'),
-              onTap: () => Navigator.of(context).pop(ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choisir dans la galerie'),
-              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Sizes.p12,
+            0,
+            Sizes.p12,
+            Sizes.p12,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: IconTile(
+                  icon: AppIcons.camera,
+                  color: context.palette.primary,
+                  size: 40,
+                ),
+                title: const Text('Prendre une photo'),
+                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+              ),
+              ListTile(
+                leading: IconTile(
+                  icon: AppIcons.gallery,
+                  color: context.palette.primary,
+                  size: 40,
+                ),
+                title: const Text('Choisir dans la galerie'),
+                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -56,183 +79,198 @@ class PendingValidationScreen extends ConsumerWidget {
       next,
     ) {
       if (next.hasError) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('${next.error}')));
+        Toast.error(context, next.error!);
       }
     });
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(Sizes.p24),
-          child: Column(
-            children: [
-              gapH24,
-              Container(
-                padding: const EdgeInsets.all(Sizes.p20),
-                decoration: BoxDecoration(
-                  color: AppColors.warningLight,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.hourglass_top_rounded,
-                  color: AppColors.warning,
-                  size: 40,
-                ),
-              ),
-              gapH16,
-              Text(
-                'Compte en attente de validation',
-                style: theme.textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
-              gapH8,
-              Text(
-                "Bonjour ${livreur.fullName.split(' ').first}, l'administration "
-                'vérifie votre profil. Vous pourrez recevoir des courses dès '
-                'que votre compte sera validé.',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppColors.textSecondaryLight,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              gapH24,
-
-              // ---- Progression ----
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(Sizes.p16),
-                decoration: BoxDecoration(
-                  color: AppColors.cardLight,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: [
-                    const _StepRow(
-                      done: true,
-                      title: 'Compte créé',
-                      subtitle: 'Vos informations sont enregistrées.',
-                    ),
-                    gapH12,
-                    _StepRow(
-                      done: hasPhoto,
-                      title: "Photo de la pièce d'identité",
-                      subtitle: hasPhoto
-                          ? '${livreur.idType} envoyée.'
-                          : '${livreur.idType} à photographier.',
-                    ),
-                    gapH12,
-                    _StepRow(
-                      done: false,
-                      title: "Validation par l'administration",
-                      subtitle: hasPhoto
-                          ? 'Votre dossier est en cours d’examen.'
-                          : "Disponible dès l'envoi de votre photo.",
-                    ),
-                  ],
-                ),
-              ),
-              gapH20,
-
-              if (hasPhoto) ...[
-                _IdentityPreview(path: livreur.idPhotoPath!),
-                gapH12,
-              ],
-
-              SizedBox(
-                width: double.infinity,
-                child: hasPhoto
-                    ? ElevatedButton(
-                        onPressed: isUploading
-                            ? null
-                            : () => _choosePhotoSource(context, ref),
-                        child: const Text('Remplacer la photo'),
-                      )
-                    : ElevatedButton(
-                        onPressed: isUploading
-                            ? null
-                            : () => _choosePhotoSource(context, ref),
-                        child: isUploading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.4,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(
-                                'Ajouter la photo de ma pièce',
-                                style: theme.textTheme.bodySmall!.copyWith(
-                                  color: Colors.white,
-                                ),
-                              ),
-                      ),
-              ),
-              if (hasPhoto && isUploading) ...[
-                gapH12,
-                const LinearProgressIndicator(),
-              ],
-              gapH12,
-              TextButton(
-                onPressed: () => ref.read(authRepositoryProvider).signOut(),
-                style: TextButton.styleFrom(
-                  backgroundColor: AppColors.errorDark.withValues(alpha: .5),
-                ),
-                child: Text(
-                  'Se déconnecter',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall!.copyWith(color: AppColors.error),
-                ),
-              ),
-            ],
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            Sizes.screenPadding,
+            Sizes.p32,
+            Sizes.screenPadding,
+            Sizes.p24,
           ),
+          children: staggerIn([
+            const Center(
+              child: IconTile(
+                icon: AppIcons.hourglass,
+                color: AppColors.warning,
+                size: 80,
+                radius: Radii.xl,
+              ),
+            ),
+            gapH20,
+            Text(
+              'Compte en attente de validation',
+              style: theme.textTheme.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
+            gapH8,
+            Text(
+              "Bonjour ${livreur.fullName.split(' ').first}, l'administration "
+              'vérifie votre profil. Vous pourrez recevoir des courses dès '
+              'que votre compte sera validé.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: context.palette.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            gapH32,
+
+            // ---- Progression ----
+            AppCard(
+              padding: const EdgeInsets.all(Sizes.p20),
+              child: Column(
+                children: [
+                  const _StepRow(
+                    state: _StepState.done,
+                    title: 'Compte créé',
+                    subtitle: 'Vos informations sont enregistrées.',
+                  ),
+                  _StepRow(
+                    state: hasPhoto ? _StepState.done : _StepState.current,
+                    title: "Photo de la pièce d'identité",
+                    subtitle: hasPhoto
+                        ? '${livreur.idType} envoyée.'
+                        : '${livreur.idType} à photographier.',
+                  ),
+                  _StepRow(
+                    state: hasPhoto ? _StepState.current : _StepState.todo,
+                    title: "Validation par l'administration",
+                    subtitle: hasPhoto
+                        ? 'Votre dossier est en cours d’examen.'
+                        : "Disponible dès l'envoi de votre photo.",
+                    isLast: true,
+                  ),
+                ],
+              ),
+            ),
+            gapH16,
+
+            if (hasPhoto) ...[
+              _IdentityPreview(path: livreur.idPhotoPath!),
+              gapH16,
+            ],
+
+            AppButton(
+              label: hasPhoto
+                  ? 'Remplacer la photo'
+                  : 'Ajouter la photo de ma pièce',
+              icon: AppIcons.camera,
+              variant: hasPhoto
+                  ? AppButtonVariant.tonal
+                  : AppButtonVariant.primary,
+              loading: isUploading,
+              onPressed: () => _choosePhotoSource(context, ref),
+            ),
+            gapH12,
+            Center(
+              child: TextButton(
+                onPressed: () =>
+                    ref.read(signOutControllerProvider.notifier).signOut(),
+                style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                child: const Text('Se déconnecter'),
+              ),
+            ),
+          ]),
         ),
       ),
     );
   }
 }
 
+enum _StepState { done, current, todo }
+
 class _StepRow extends StatelessWidget {
   const _StepRow({
-    required this.done,
+    required this.state,
     required this.title,
     required this.subtitle,
+    this.isLast = false,
   });
 
-  final bool done;
+  final _StepState state;
   final String title;
   final String subtitle;
+  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          done ? Icons.check_circle : Icons.radio_button_unchecked,
-          color: done ? AppColors.success : AppColors.textHintLight,
+    final indicator = switch (state) {
+      _StepState.done => Container(
+        width: 26,
+        height: 26,
+        decoration: const BoxDecoration(
+          color: AppColors.success,
+          shape: BoxShape.circle,
         ),
-        gapW12,
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: const AppIcon(AppIcons.check, size: 16, color: Colors.white),
+      ),
+      _StepState.current => Container(
+        width: 26,
+        height: 26,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: context.palette.primarySoft,
+          shape: BoxShape.circle,
+          border: Border.all(color: context.palette.primary, width: 2),
+        ),
+      ),
+      _StepState.todo => Container(
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: context.palette.border, width: 2),
+        ),
+      ),
+    };
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Column(
             children: [
-              Text(title, style: theme.textTheme.bodyMedium),
-              Text(
-                subtitle,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppColors.textSecondaryLight,
+              indicator,
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    color: state == _StepState.done
+                        ? AppColors.success.withValues(alpha: 0.4)
+                        : context.palette.border,
+                  ),
                 ),
-              ),
             ],
           ),
-        ),
-      ],
+          gapW16,
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : Sizes.p20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: state == _StepState.todo
+                          ? context.palette.textMuted
+                          : context.palette.textPrimary,
+                    ),
+                  ),
+                  Text(subtitle, style: theme.textTheme.bodySmall),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -244,20 +282,32 @@ class _IdentityPreview extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final photo = ref.watch(identityPhotoProvider(path));
 
+    Widget message(String text) => Center(
+      child: Padding(
+        padding: const EdgeInsets.all(Sizes.p16),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall,
+        ),
+      ),
+    );
+
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
+      borderRadius: BorderRadius.circular(Radii.lg),
+      child: Container(
         height: 180,
         width: double.infinity,
+        color: context.palette.surfaceMuted,
         child: photo.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, _) => const Center(
-            child: Text("Aperçu indisponible (la photo est bien envoyée)."),
-          ),
+          loading: () => const Shimmer(child: SkeletonBox(radius: 0)),
+          error: (_, _) =>
+              message('Aperçu indisponible (la photo est bien envoyée).'),
           data: (bytes) => bytes == null
-              ? const Center(child: Text('Aperçu indisponible.'))
+              ? message('Aperçu indisponible.')
               : Image.memory(bytes, fit: BoxFit.cover),
         ),
       ),

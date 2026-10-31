@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:dksoft_market_livreur/core/widgets/app_icon.dart';
+import 'package:dksoft_market_livreur/utils/themes/app_palette.dart';
 import 'dart:math' as math;
 
 import 'package:dksoft_market_livreur/core/animations/motion.dart';
@@ -91,7 +93,7 @@ class _CelebrationState extends State<_Celebration>
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.35),
+                color: context.palette.primary.withValues(alpha: 0.35),
                 blurRadius: 50,
                 offset: const Offset(0, 24),
               ),
@@ -137,8 +139,8 @@ class _CelebrationState extends State<_Celebration>
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.check_rounded,
+                        child: const AppIcon(
+                          AppIcons.check,
                           color: Colors.white,
                           size: 48,
                         ),
@@ -148,14 +150,14 @@ class _CelebrationState extends State<_Celebration>
                 ),
               ),
               const SizedBox(height: 8),
-              const FadeSlideIn(
+              FadeSlideIn(
                 delay: Duration(milliseconds: 250),
                 child: Text(
                   'Course terminée !',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryLight,
+                    color: context.palette.textPrimary,
                   ),
                 ),
               ),
@@ -173,13 +175,13 @@ class _CelebrationState extends State<_Celebration>
                 ),
               ),
               const SizedBox(height: 6),
-              const FadeSlideIn(
+              FadeSlideIn(
                 delay: Duration(milliseconds: 520),
                 child: Text(
                   'ajoutés à vos gains',
                   style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.textSecondaryLight,
+                    color: context.palette.textSecondary,
                   ),
                 ),
               ),
